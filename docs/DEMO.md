@@ -15,6 +15,13 @@ Output lands in `demo-run/`: live commentary on the console, then
 `demo-run/WALKTHROUGH.md`, `campaign/` (git-versioned task records, knowledge base,
 ledger, shared tables) and `world/` (the input FASTA and the hidden truth).
 
+Open `demo-run/replay.html` in a browser for the 2D replay: the run drawn as tasks moving
+between the worker, supervisor, curator, knowledge base and triage stations, with a
+what/why caption per step and a scrubber. It is a single offline file built from
+`demo-run/events.json`, the structured twin of the console commentary, so it shows what
+the harness did, not a scripted animation. `docs/assets/how-it-works.svg` is the looping
+version of one task's path used in the README.
+
 ## What it is
 
 | | Paper (Yoon et al. 2026) | This demo |
