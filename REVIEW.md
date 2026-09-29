@@ -52,7 +52,7 @@ status both paths share.
 
 ## Skip lists
 
-- `__pycache__/`, `.venv/`, lockfiles — not present, not reviewed.
+- `__pycache__/`, `.venv/`, `uv.lock` (generated) — not reviewed.
 - `task-runs/` receipts — historical records; review only for secrets.
 - `docs/paper-notes.md` content fidelity to the paper itself was checked line
   by line against the PDF on 2026-09-24; re-check only where code disagrees.

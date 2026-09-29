@@ -21,8 +21,11 @@ This repo rebuilds the three layers of that system with public tools:
 
 ## Status
 
-v0.1.0 — scaffold + core contracts + science-core logic + tests. See `REPRODUCTION.md`
-for the paper-element → component map and `TASKS.md` for the build queue.
+v0.1.0 tagged. All three layers are implemented and tested offline (`make check`:
+ruff, shellcheck, pytest with a coverage floor). No live model campaign, benchmark
+run or real-data pipeline run has been executed yet: those are budget/compute-gated.
+`REPRODUCTION.md` maps every paper element to its component and state and lists the
+unreproducible gaps; `TASKS.md` holds the open work.
 
 ## Safety gates
 

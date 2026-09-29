@@ -21,15 +21,15 @@ transcriptases with tandem repeat arrays". Facts ledger: `docs/paper-notes.md`.
 | 12 | Campaign accounting: sessions/roles, agent-hours, token classes | Methods p.30 | `accounting.SessionLedger` | done |
 | 13 | Report tournament: 342 games, rubric weights, soundness auto-lose, BTL | Methods p.30 | `tournament.py` | done |
 | 14 | RT census: 52 HMMs → 203,381 → 198,290 clusters → 9 classes | Methods p.29 | `pipeline/census/01–04` | done |
-| 15 | Neighborhood sampling: 7,308 anchors → 10,983 loci | Methods p.29-30 | `pipeline/census/05` | Devin PR |
-| 16 | Partner scoring: 3 filters, controls, 3,564 → 16 | Methods p.30 | `pipeline/census/06` | Devin PR |
-| 17 | ART family definition: QQM14740.1 → 95 members | Methods p.31-32 | `pipeline/art_family/family_definition.sh` | Devin PR |
+| 15 | Neighborhood sampling: 7,308 anchors → 10,983 loci | Methods p.29-30 | `pipeline/census/05` | done + tests (`test_pipeline_logic`) |
+| 16 | Partner scoring: 3 filters, controls, 3,564 → 16 | Methods p.30 | `pipeline/census/06` | done + tests (`test_pipeline_logic`) |
+| 17 | ART family definition: QQM14740.1 → 95 members | Methods p.31-32 | `pipeline/art_family/family_definition.sh` | done as a flag-exact wrapper (dry-run + flag tests); never run on real data; two GAPs noted in the script header |
 | 18 | k-mer array scan (20×14-mer seeds, shuffles, R≥3) | Methods p.32 | `artharness.arrays.kmer_scan` | done + tests |
 | 19 | Array delimitation (10-mer, 30% tol, 200/2000 shuffles, PWM) | Methods p.32 | `artharness.arrays.delimit_array` + `pwm_extend` + `cross_scan` | done + tests |
-| 20 | Phylogeny: 774 set, MAFFT L-INS-i, IQ-TREE Q.pfam+F+R6 | Methods p.33 | `pipeline/art_family/phylogeny.sh` | Devin PR |
-| 21 | RNA-seq reanalysis: PRJNA836150, Bowtie2, 8% at 15 min | Methods p.36-37 | `pipeline/rnaseq/sa1_infection.sh` | Devin PR |
+| 20 | Phylogeny: 774 set, MAFFT L-INS-i, IQ-TREE Q.pfam+F+R6 | Methods p.33 | `pipeline/art_family/phylogeny.sh` | done as a flag-exact wrapper (dry-run + flag tests); never run on real data |
+| 21 | RNA-seq reanalysis: PRJNA836150, Bowtie2, 8% at 15 min | Methods p.36-37 | `pipeline/rnaseq/sa1_infection.sh` | done as a flag-exact wrapper (dry-run, flag and injection tests); never run on real data |
 | 22 | Wet-lab protocols (plasmids, small-RNA-seq) | Methods p.36-37 | documented only — no lab (GAP-6) | documented |
-| 23 | Benchmark: L1–L5, 3,500 attempts, 10-claim rubric, judge | Methods p.38 | `benchmark/` | Devin PR |
+| 23 | Benchmark: L1–L5, 3,500 attempts, 10-claim rubric, judge | Methods p.38 | `benchmark/` | done offline (levels, rubric, grader, runner tested); no live run (GAP-7 budget gate) |
 | 24 | Replicate campaigns (10×) + transcript forensics | Methods p.38 | rerun via orchestrator + `experiments/forensics.py` (identifier search, ≥200-nt DNA + repeat-remark parsing) | forensics done; reruns budget-gated (GAP-7) |
 | 25 | Interpretability (Evo2/gLM2 profiles; Mythos 5 sparse signals) | Methods p.38-39 | out of repo scope — needs model internals (GAP-3) | not reproducible |
 | 26 | Serendipity chain t0010 → t0062 | Results p.3-5 | emerges from harness if workers/supervisors behave similarly | not guaranteed (paper: 0/10 reruns) |
