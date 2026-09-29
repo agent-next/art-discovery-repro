@@ -7,7 +7,7 @@ transcriptases with tandem repeat arrays". Facts ledger: `docs/paper-notes.md`.
 
 | # | Paper element | Paper ref | Component | State |
 |---|---|---|---|---|
-| 1 | Launch agent, 5-stage chain, scripted completion gates | Methods p.28 | `orchestrator.run_stage_chain` + caller-supplied `Gate` callables | done |
+| 1 | Launch agent, 5-stage chain, scripted completion gates | Methods p.28 | `orchestrator.run_stage_chain` (dispatches each stage, then evaluates its caller-supplied `Gate`; the final gate closes the chain) | done |
 | 2 | Task records in version control, readable by every agent | Methods p.28 | `records.RecordStore` (git-backed tree; git optional for tests) | done |
 | 3 | Worker: plan → execute → summary + artifacts; proposes follow-ups | Methods p.28 | `roles.Roles.worker` + role prompts | done (prompt text is ours; original not public — GAP-1) |
 | 4 | Supervisor accept/revise review; writes follow-up briefs | Methods p.28, p.31 | `Roles.supervisor`; orchestrator revision loop; `verdict-rN.md` | done |

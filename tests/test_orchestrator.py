@@ -57,6 +57,36 @@ def test_stage_chain_gates_block_later_stages(tmp_path: Path):
     assert ids == ["t0001"]  # stage-3 task never opened while stage-2 gate is shut
 
 
+def test_stage_gates_evaluate_after_stage_work(tmp_path: Path):
+    """Power test (paper p.28): a stage's gate sees that stage's finished tasks, and
+    no later-stage task exists until it passes. The previous implementation opened
+    every stage before dispatching anything, so each gate ran against zero work and
+    the final stage's gate never ran."""
+    events: list[tuple[str, dict[str, str | None]]] = []
+    holder: dict = {}
+
+    def gate_for(stage):
+        def gate(_):
+            snap = {r.task_id: (r.stage, r.status.value)
+                    for r in holder["store"].list_tasks()}
+            events.append((stage, snap))
+            return True
+        return gate
+
+    gates = {s: gate_for(s) for s in STAGES}
+    orch, store, _, _ = make_orch(tmp_path, gates=gates)
+    holder["store"] = store
+    orch.run_stage_chain({STAGES[0]: ["assemble"], STAGES[1]: ["sweep"],
+                          STAGES[4]: ["dive"]})
+
+    assert [e[0] for e in events] == list(STAGES)
+    for stage, snap in events:
+        idx = STAGES.index(stage)
+        done = [st for (stg, st) in snap.values() if STAGES.index(stg) <= idx]
+        assert done and all(st == TaskStatus.CURATED.value for st in done)
+        assert all(STAGES.index(stg) <= idx for (stg, _) in snap.values())
+
+
 def test_full_happy_path_with_curation(tmp_path: Path):
     orch, store, ledger, _ = make_orch(tmp_path)
     orch.run_stage_chain({STAGES[0]: ["Assemble input data"],

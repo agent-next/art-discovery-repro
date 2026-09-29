@@ -15,7 +15,7 @@ from artharness.arrays import (
     pwm_extend,
 )
 from artharness.config import CampaignConfig
-from artharness.records import RecordStore, TaskStatus
+from artharness.records import RecordStore, TaskOrigin, TaskStatus
 from artharness.runner.base import ScriptedBackend
 
 # ---------------------------------------------------------------------------
@@ -200,11 +200,7 @@ def test_revision_pass_failing_completion_check_stalls(tmp_path: Path):
                           "3_rt_classification", "4_neighborhood_census",
                           "5_deep_dives")})
     orch.run_stage_chain({"1_input_assembly": ["do a thing"]})
-    orch.report.tasks_total = 1
     rec = store.list_tasks()[0]
-    orch.queue.clear()
-    orch.queue.append(rec.task_id)
-    orch.run()
     final = store.get(rec.task_id)
     # the revision pass produced no summary -> completion-check failure -> STALL.
     # Assert the COUNTERS, not just the status: a revisions-limit stall also
@@ -565,7 +561,7 @@ def test_file_report_refuses_pre_curation_states(tmp_path: Path):
     orch = Orchestrator(CampaignConfig(), store, KnowledgeBase(root / "kb"),
                         SessionLedger(root / "ledger.jsonl"), ScriptedBackend(),
                         {s: (lambda s: True) for s in STAGES})
-    orch.run_stage_chain({"1_input_assembly": ["a"], STAGES[1]: ["b"]})
+    orch._new_task("1_input_assembly", "a", TaskOrigin.SEED)
     # OPEN (never dispatched): the old alphabetical `<` happened to refuse this;
     # EXECUTED (worker done, no curator) MUST also be refused and was not
     # reachable through the old comparison

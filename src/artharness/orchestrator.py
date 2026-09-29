@@ -89,38 +89,34 @@ class Orchestrator:
     # -- stage chain ---------------------------------------------------------
     def run_stage_chain(self, briefs: dict[str, list[str]],
                         deep_dive_labels: dict[str, list[str]] | None = None) -> None:
-        """Encode the research brief as a chain of seeded tasks (paper: 5 stage tasks,
-        16 deep dives). Each stage's tasks enqueue only after the previous stage's
-        scripted gate passes."""
+        """Execute the research brief as a chain of stages (paper: 5 stage tasks, 16
+        deep dives). A stage's tasks are opened only after the previous stage's
+        tasks (and every follow-up they spawned) have been dispatched and its
+        scripted gate passes; the last stage's gate closes the chain."""
         # brief provenance is part of the versioned record (S1 finding D: the
         # mandate existed only as prose in the brief; nothing enforced it)
         (self.store.root / "campaign.md").write_text(
             f"# campaign record\n\n{self.cfg.brief_provenance}\n\n"
             "This campaign runs a RECONSTRUCTED research brief; it is not the "
             "verbatim Anthropic brief (Supplementary Note 1, unpublished).\n")
-        opened: dict[str, list[str]] = {}
-        for i, stage in enumerate(STAGES):
-            for prev in STAGES[:i]:
-                gate = self.gates.get(prev)
-                if gate is None:
-                    raise ValueError(f"stage {prev} has no scripted completion gate")
-                failures = 0
-                while not gate(prev):
-                    failures += 1
-                    if failures >= self.cfg.max_gate_failures:
-                        raise RuntimeError(
-                            f"gate for {prev} failed {failures} times; aborting chain")
-            opened[stage] = []
-            for brief in briefs.get(stage, []):
-                rec = self._new_task(stage, brief, TaskOrigin.SEED)
-                if rec is not None:  # budget cap may refuse the task (A4)
-                    opened[stage].append(rec.task_id)
         deep_dive_labels = deep_dive_labels or {}
-        for stage, labels in deep_dive_labels.items():
-            for label in labels:
-                rec = self._new_task(stage, f"Deep dive: {label}", TaskOrigin.DEEP_DIVE)
-                if rec is not None:
-                    opened.setdefault(stage, []).append(rec.task_id)
+        for i, stage in enumerate(STAGES):
+            if i:
+                self._require_gate(STAGES[i - 1])
+            for brief in briefs.get(stage, []):
+                self._new_task(stage, brief, TaskOrigin.SEED)
+            for label in deep_dive_labels.get(stage, []):
+                self._new_task(stage, f"Deep dive: {label}", TaskOrigin.DEEP_DIVE)
+            self._drain()
+        self._require_gate(STAGES[-1])
+        self.report.tasks_total = len(self.store.list_tasks())
+
+    def _require_gate(self, stage: str) -> None:
+        gate = self.gates.get(stage)
+        if gate is None:
+            raise ValueError(f"stage {stage} has no scripted completion gate")
+        if not gate(stage):
+            raise RuntimeError(f"gate for {stage} failed; aborting chain")
 
     # -- task creation / triage ------------------------------------------------
     def _new_task(self, stage: str, brief: str, origin: TaskOrigin,
@@ -160,15 +156,17 @@ class Orchestrator:
     # -- dispatch loop ------------------------------------------------------------
     def run(self) -> CampaignReport:
         """Run until the queue is exhausted (paper's termination condition)."""
-        while self.queue:
-            task_id = self.queue.popleft()
-            rec = self.store.get(task_id)
-            with self._sem:
-                self._dispatch(rec)
+        self._drain()
         # S3 finding 1: the queue is a SUBSET of the store (run_stage_chain
         # appends every created task to both) — adding them double-counted.
         self.report.tasks_total = len(self.store.list_tasks())
         return self.report
+
+    def _drain(self) -> None:
+        while self.queue:
+            rec = self.store.get(self.queue.popleft())
+            with self._sem:
+                self._dispatch(rec)
 
     def _dispatch(self, rec: TaskRecord) -> None:
         # One loop per WORKER pass. Every pass — initial or revision — must pass
