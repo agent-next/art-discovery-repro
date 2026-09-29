@@ -27,6 +27,7 @@ from ..records import RecordStore, TaskStatus
 from ..runner.base import ScriptedBackend  # noqa: F401  (re-export for tests)
 from .agents import OllamaAgent, OllamaChat, RuleAgent, check_ollama
 from .narrator import NarratedBackend, Narrator
+from .replay import write_replay
 from .tools import FRAGMENT_MAX_AA
 from .walkthrough import write_walkthrough
 from .world import build_world, read_fasta
@@ -140,6 +141,7 @@ def make_gates(shared: Path, genomes: Path, narrator: Narrator) -> dict[str, Cal
     def wrap(stage: str, check: Callable[[], str | None]) -> Callable[[str], bool]:
         def gate(_stage: str) -> bool:
             why = check()
+            narrator.event("gate", stage=stage, ok=why is None, why=why or "")
             narrator.emit(f"  GATE {stage}: " + ("PASS" if why is None else f"FAIL - {why}"),
                           "gate")
             return why is None
@@ -166,6 +168,7 @@ def make_triage(shared: Path, narrator: Narrator) -> Callable:
             else:
                 opened.add(lid)
                 ok, reason = True, ""
+        narrator.event("triage", parent=parent.task_id, brief=brief[:140], ok=ok, why=reason)
         narrator.emit(f"  TRIAGE from {parent.task_id}: "
                       + ("released" if ok else f"REJECTED - {reason}") + f"  [{brief[:60]}]",
                       "triage")
@@ -286,6 +289,7 @@ def run_demo(opts: DemoOptions, say: Callable[[str], None] = print) -> DemoResul
         orch.run_stage_chain(BRIEFS)
     except RuntimeError as exc:
         error = str(exc)
+        narrator.event("stop", why=error)
         say(f"\nCAMPAIGN STOPPED: {exc}")
     report = orch.report
     report.tasks_total = len(store.list_tasks())
@@ -298,16 +302,23 @@ def run_demo(opts: DemoOptions, say: Callable[[str], None] = print) -> DemoResul
             say("\nReport: draft from the shared tables, then the editor decides.")
             text = build_report(shared, [r.task_id for r in store.list_tasks()])
             filed = orch.file_report(synth.task_id, text)
+            narrator.event("report", id=synth.task_id, filed=filed is not None)
             say(f"  report {'FILED at ' + str(filed.relative_to(out)) if filed else 'NOT filed'}",
                 )
         report = orch.report
     sc = score(shared, truth) if (shared / "arrays.tsv").exists() else None
     wt = write_walkthrough(out, camp, store, ledger, report, sc, opts, who,
                            elapsed=time.monotonic() - t0, error=error, filed=filed)
+    score_line = (f"{sc.found_true}/{sc.true_arrays} planted arrays found, "
+                  f"{len(sc.false_calls)} false calls, decoys handled "
+                  f"{sum(sc.decoys_ok.values())}/{len(sc.decoys_ok)}") if sc else ""
+    write_replay(out, narrator.events, {
+        "line": f"{who} \u00b7 {report.tasks_total} tasks \u00b7 {time.monotonic() - t0:.0f}s",
+        "score": score_line, "summary": report.render().replace("\n", " | ")})
     say("\n" + report.render())
     if sc:
         say(f"Scorecard vs hidden truth: {sc.found_true}/{sc.true_arrays} planted arrays "
             f"found, {len(sc.false_calls)} false calls, decoys handled "
             f"{sum(sc.decoys_ok.values())}/{len(sc.decoys_ok)}")
-    say(f"Walkthrough: {wt}")
+    say(f"Walkthrough: {wt}\nReplay (open in a browser): {out / 'replay.html'}")
     return DemoResult(out, report, sc, error is None, error, filed, wt)

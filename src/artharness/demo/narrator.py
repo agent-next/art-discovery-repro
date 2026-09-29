@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import threading
+import time
 from collections.abc import Callable
 from pathlib import Path
 
@@ -40,6 +41,13 @@ class Narrator:
         self.say, self.explain = say, explain
         self._told: set[str] = set()
         self._lock = threading.Lock()
+        self._t0 = time.monotonic()
+        self.events: list[dict] = []  # structured twin of the commentary, for the replay
+
+    def event(self, kind: str, **fields) -> None:
+        with self._lock:
+            self.events.append({"k": kind, "t": round(time.monotonic() - self._t0, 2),
+                                **fields})
 
     def note(self, key: str) -> None:
         if self.explain and key not in self._told:
@@ -70,12 +78,15 @@ class NarratedBackend:
             brief = (spec.workdir / "brief.md").read_text().splitlines()[0][:96]
             origin = meta.get("origin", "?") + (f" of {meta['parent']}" if meta.get("parent")
                                                 else "")
+            self.n.event("task", id=tid, stage=meta.get("stage"), origin=meta.get("origin"),
+                         parent=meta.get("parent"), brief=brief)
             self.n.emit(f"  task {tid} [{meta.get('stage', '?')}] ({origin}): {brief}")
         out = self.inner.run(spec)
         r = out.result
         tok = f"{r.input_tokens_uncached}->{r.output_tokens} tok" if (
             r.input_tokens_uncached or r.output_tokens) else "no model"
         detail = ""
+        calls: list[dict] = []
         if spec.role == "worker":
             log = spec.workdir / "artifacts" / "tool_log.jsonl"
             calls = [json.loads(ln) for ln in log.read_text().splitlines()] if log.exists() \
@@ -94,6 +105,14 @@ class NarratedBackend:
             detail = f"FILE: {out.verdict}"
         elif spec.role == "curator":
             detail = "entered findings into the knowledge base"
+        tools = []
+        if spec.role == "worker":
+            tools = [{"tool": c["tool"], "ok": c["ok"], "headline": c["headline"]
+                      or c["output"][:80]} for c in calls]
+        self.n.event("session", role=spec.role, id=tid, dur=r.duration_s,
+                     tin=r.input_tokens_uncached, tout=r.output_tokens, verdict=out.verdict,
+                     note=(out.verdict_notes or "")[:240] if out.verdict != "accept" else "",
+                     tools=tools, followups=len(out.proposed_followups))
         self.n.emit(f"    {spec.role:<10} {tid} {r.duration_s:5.1f}s {tok:<14} {detail}",
                     spec.role, *(["revise"] if spec.role == "supervisor"
                                  and out.verdict != "accept" else []))
