@@ -127,7 +127,8 @@ def permutation_pvalue(
 
     Paper p.30 (verbatim): "genes of the family had to lie nearer to the RT
     than randomly drawn genes of the same loci (P <= 0.05)". The NULL POOL is
-    stated (genes of the same loci — the caller restricts `background`); the
+    stated (genes of the same loci — promotes() restricts the pool it passes
+    here); the
     DISTANCE MEASURE is not, and graded distance-to-RT is not in the neighbor
     records, so the STATISTIC is INTERPRETED as the count of occurrences
     passing proximity_qualifies() (RT-adjacent AND same-strand-or-<=100bp).
@@ -166,6 +167,10 @@ def promotes(
     # full neighborhood pool made distant loci do the null's job).
     family_loci = {o.locus_id for o in occurrences}
     same_loci_pool = [g for g in background if g.locus_id in family_loci]
+    # INTERPRETED (devin review F4): unreachable via main() (background
+    # includes the occurrences, so their loci are always present) — the full
+    # pool fallback only serves exotic callers; a family's own genes stay in
+    # its null pool under the literal "genes of the same loci" reading.
     pool = same_loci_pool if same_loci_pool else list(background)
     p = permutation_pvalue(occurrences, pool, n_permutations, rng)
     return p <= PERMUTATION_P_MAX, p

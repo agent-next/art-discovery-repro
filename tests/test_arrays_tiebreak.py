@@ -36,11 +36,15 @@ def test_consensus_letter_is_hashseed_independent():
 
 def test_chain_score_consensus_letter_is_hashseed_independent():
     # _chain_score's consensus join has the same max(set(col), ...) pattern
+    # copies differ at exactly ONE column with a 2-2 A/G split -> that column
+    # is the block's one tolerated lapse, and its consensus letter is a real
+    # modal tie that must resolve to 'A' (alphabetical), never to set order
+    # (devin review F2 — the previous identical-copy fixture was vacuous)
     code = (
-        "import random\n"
         "from artharness.arrays import _chain_score\n"
-        "win = ('ACACGTACGTAC' * 40) + 'ACGT'\n"
-        "chain = [0, 12, 24, 36, 48]\n"
+        "copies = ['AAAAACGT', 'AGAAACGT', 'AGAAACGT', 'AAAAACGT']\n"
+        "win = ''.join(c + 'GGGG' for c in copies)\n"
+        "chain = [0, 12, 24, 36]\n"
         "print(_chain_score(win, chain, 8)[1])\n"
     )
     outs = []
@@ -52,3 +56,5 @@ def test_chain_score_consensus_letter_is_hashseed_independent():
     assert len(set(outs)) == 1, (
         f"_chain_score consensus differs across PYTHONHASHSEED: {outs!r}"
     )
+    # the tie column (index 1) must resolve alphabetically -> 'AAAAACGT'
+    assert all(o == "AAAAACGT" for o in outs), outs

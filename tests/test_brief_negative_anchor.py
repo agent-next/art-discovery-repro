@@ -7,7 +7,9 @@ import pathlib
 import re
 
 BRIEF = pathlib.Path(__file__).resolve().parents[1] / "brief" / "research_brief.md"
-LEAK = re.compile(r"\b(repeat|array|tandem)s?\b", re.IGNORECASE)
+# stems, not whole words: "repetitive"/"repeated"/"tandemly" must not slip
+# through (devin review F6); no legitimate brief term starts with these
+LEAK = re.compile(r"\b(repeat|repetit|tandem|array)", re.IGNORECASE)
 
 
 def _brief_body() -> str:

@@ -169,8 +169,9 @@ def test_consensus_block_nonadjacent_second_lapse_ends_block():
     # the budget; the block ends exclusive of the second failing column.
     # Column fractions (over the 4 copies): 1.0, 0.5 (lapse), 1.0 (pass),
     # 0.5 (second lapse), then 0.5 to end -> (0, 3) under a total budget.
-    # (The reset-after-pass reading returns (0, 4): the second lapse gets
-    # tolerated too. FAILING-FIRST against the pre-fix code.)
+    # (The reset-after-pass reading returned (0, 8): with an alternating
+    # pattern every other failing column was re-tolerated. Verified by devin
+    # review F5; the commit message's (0, 4) counterfactual was wrong.)
     from artharness.arrays import _consensus_block
 
     cols = [
