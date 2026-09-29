@@ -300,9 +300,11 @@ def _consensus_block(copies_seqs: list[str]) -> tuple[int, int, str]:
         if frac >= CONSENSUS_FRACTION:
             if start is None:
                 start = i
-            lapses = 0
+            # Paper p.32: "with one lapse tolerated" — ONE lapse per block
+            # (a total budget), NOT per run of passing columns: a passing
+            # column between two failures must not reset it.
         elif start is not None and lapses == 0:
-            lapses += 1  # one lapse tolerated
+            lapses += 1  # the one tolerated lapse
         else:
             if start is not None:
                 blocks.append((start, i))  # end exclusive: the second failing
@@ -310,6 +312,9 @@ def _consensus_block(copies_seqs: list[str]) -> tuple[int, int, str]:
             start = None
             lapses = 0
     if start is not None:
+        # NOT-IN-PAPER: whether a block whose LAST column is the tolerated
+        # lapse (no second failure follows) includes that trailing lapse
+        # column — the paper's wording does not settle it; included here.
         blocks.append((start, len(cons)))
     if not blocks:
         return 0, 0, ""
