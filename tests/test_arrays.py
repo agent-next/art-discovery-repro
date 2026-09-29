@@ -150,3 +150,65 @@ def test_rt_adjacency_rule_requires_no_300nt_gene_in_gap():
     # empty annotation but gene list given -> no gene between -> adjacent
     arr3 = _fast_delimit("L_x", up, gene_spans=[], rt_offset=rt)
     assert arr3 is not None and arr3.rt_adjacent is True
+
+
+def _flagged_array(coding: bool, adjacent) -> "arrays.DelimitedArray":
+    return arrays.DelimitedArray(
+        locus="L_f", copy_starts=[0, 60, 120, 180], repeat="ACGTACGTTA",
+        score=100.0, shuffles_used=200, spacings=[60, 60, 60],
+        block_offset=0, coding_repeat=coding, rt_adjacent=adjacent)
+
+
+def _extendable_upstream() -> str:
+    # 4 near-constant copies (60-nt step), a 200-nt gap (not near-constant ->
+    # the delimit chain stops at 4), then 2 more repeat copies the PWM
+    # extension must pick up beyond the gap.
+    rng = random.Random(3)
+    parts = []
+    for _ in range(4):
+        parts.append("ACGTACGTTA" + "".join(rng.choice("AT") for _ in range(50)))
+    parts.append("".join(rng.choice("GC") for _ in range(200)))
+    for _ in range(2):
+        parts.append("ACGTACGTTA" + "".join(rng.choice("AT") for _ in range(50)))
+    return "".join(parts)
+
+
+def test_pwm_extend_recomputes_delimitation_flags_with_annotation():
+    # Devin F1: pwm_extend used to rebuild DelimitedArray without
+    # coding_repeat/rt_adjacent — the flags silently reset on the extension
+    # path, guaranteed to defeat both p.32 rules once callers pass annotation.
+    up = _extendable_upstream()
+    # annotation: one gene covers ONLY the original 4 copies (0..189); the
+    # extension pushes the last copy to >= 300 -> no single gene covers all.
+    gene_orig = [(0, 190)]
+    arr = _fast_delimit("L_f", up, gene_spans=gene_orig)
+    assert arr is not None and len(arr.copy_starts) == 4  # chain stops at gap
+    assert arr.coding_repeat  # precondition: all 4 copies inside the gene
+    ext = arrays.pwm_extend(arr, up, random.Random(7),
+                            gene_spans=gene_orig, rt_offset=len(up) + 50)
+    assert len(ext.copy_starts) > len(arr.copy_starts)  # extension happened
+    assert ext.coding_repeat is False  # copies now escape the annotated gene
+    assert ext.rt_adjacent is not None
+
+
+def test_pwm_extend_marks_flags_stale_when_annotation_absent():
+    up = _extendable_upstream()
+    arr = _fast_delimit("L_f", up)
+    assert arr is not None and arr.rt_adjacent is None  # no annotation in
+    ext = arrays.pwm_extend(arr, up, random.Random(7))
+    if len(ext.copy_starts) > len(arr.copy_starts):
+        # copies were added beyond the old last copy -> old flags would be
+        # stale; without annotation they are unverifiable, not silently kept
+        assert ext.rt_adjacent is None
+
+
+def test_rt_adjacency_gene_containing_last_copy_does_not_block():
+    # Devin F3: "lay between its last copy and the RT" — a >=300-nt gene that
+    # CONTAINS the last copy is not BETWEEN the copy and the RT and must not
+    # block adjacency (overlap-with-gap semantics wrongly blocked it).
+    up = _planted_mod3_upstream()
+    rt = len(up) + 500
+    last_copy_end = len(up) - 50 + 10  # last copy block end (approx)
+    spanning_gene = [(last_copy_end - 400, last_copy_end + 50)]  # 450 nt, contains copy
+    arr = _fast_delimit("L_x", up, gene_spans=spanning_gene, rt_offset=rt)
+    assert arr is not None and arr.rt_adjacent is True  # not BETWEEN

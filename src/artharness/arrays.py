@@ -404,6 +404,39 @@ def _chain_score(window: str, chain: list[int], seed_len: int) -> tuple[float, s
         for col in zip(*columns, strict=False))
 
 
+def _delimitation_flags(
+    chain: list[int],
+    spacings: list[int],
+    window_len: int,
+    gene_spans: list[tuple[int, int]] | None,
+    rt_offset: int | None,
+) -> tuple[bool, bool | None]:
+    """Both paper Methods p.32 delimitation rules for one chain.
+
+    rule 1: "Chains whose spacings were all multiples of three and whose
+    copies lay within an annotated gene were set aside as coding repeats."
+    rule 2: "An array was called adjacent to the RT when no annotated gene of
+    300 nt or more lay between its last copy and the RT."
+    INTERPRETED (F3, devin review PR#18): "lay between" = the gene lies fully
+    inside the open gap (start >= last copy end, end <= RT position); a gene
+    containing the last copy or crossing the RT is not "between". Spans are
+    half-open [a, b) in window coordinates.
+    """
+    coding_repeat = bool(gene_spans) and all(s % 3 == 0 for s in spacings) and any(
+        a <= chain[0] and chain[-1] + SEED_LEN_DELIMIT <= b for a, b in gene_spans
+    )
+    rt_adjacent = None
+    if gene_spans is not None:
+        rt_pos = window_len if rt_offset is None else rt_offset
+        last_copy_end = chain[-1] + SEED_LEN_DELIMIT
+        rt_adjacent = not any(
+            b - a >= RT_ADJACENCY_GENE_MIN_NT
+            and a >= last_copy_end and b <= rt_pos
+            for a, b in gene_spans
+        )
+    return coding_repeat, rt_adjacent
+
+
 def delimit_array(
     locus: str,
     upstream: str,
@@ -478,23 +511,8 @@ def delimit_array(
     copies_seqs = [window6[p:p + SEED_LEN_DELIMIT] for p in chain]
     blk_s, _, repeat = _consensus_block(copies_seqs)
     spacings = [b - a for a, b in zip(chain, chain[1:], strict=False)]
-    # paper Methods p.32, rule 1: "Chains whose spacings were all multiples of
-    # three and whose copies lay within an annotated gene were set aside as
-    # coding repeats" — flagged here; callers filter coding repeats out of the
-    # array set (the paper sets them aside, it does not drop the data).
-    coding_repeat = bool(gene_spans) and all(s % 3 == 0 for s in spacings) and any(
-        a <= chain[0] and chain[-1] + SEED_LEN_DELIMIT <= b for a, b in gene_spans
-    )
-    # paper Methods p.32, rule 2: "An array was called adjacent to the RT when
-    # no annotated gene of 300 nt or more lay between its last copy and the RT."
-    rt_adjacent = None
-    if gene_spans is not None:
-        rt_pos = len(window6) if rt_offset is None else rt_offset
-        last_copy_end = chain[-1] + SEED_LEN_DELIMIT
-        rt_adjacent = not any(
-            b - a >= RT_ADJACENCY_GENE_MIN_NT and a < rt_pos and b > last_copy_end
-            for a, b in gene_spans
-        )
+    coding_repeat, rt_adjacent = _delimitation_flags(
+        chain, spacings, len(window6), gene_spans, rt_offset)
     return DelimitedArray(locus=locus, copy_starts=chain, repeat=repeat,
                           score=score, shuffles_used=shuffles_used,
                           spacings=spacings, block_offset=blk_s,
@@ -542,10 +560,19 @@ def pwm_max_shuffle_score(window: str, pwm: list[dict[str, float]],
 
 
 def pwm_extend(array: DelimitedArray, upstream: str, rng: random.Random,
+               gene_spans: list[tuple[int, int]] | None = None,
+               rt_offset: int | None = None,
                ) -> DelimitedArray:
     """'A position weight matrix of the repeat was then built, and matches that
     scored above the maximum of 200 shuffled regions were counted as copies'
-    (Methods p.32). Returns a new DelimitedArray with extended copy list."""
+    (Methods p.32). Returns a new DelimitedArray with extended copy list.
+
+    Delimitation flags (coding_repeat / rt_adjacent) are RECOMPUTED on the
+    extended copy list when gene_spans is supplied (extension can push the
+    last copy past the old annotation boundary). Without annotation the old
+    flags are stale the moment copies are added: rt_adjacent resets to None
+    (unverifiable) rather than silently keeping a value computed for a chain
+    that no longer exists (devin review PR#18, F1)."""
     window = upstream[-MAX_UPSTREAM_DELIMIT:].upper()
     background = {b: window.count(b) / max(1, len(window)) for b in BASES}
     w = len(array.repeat)
@@ -579,9 +606,17 @@ def pwm_extend(array: DelimitedArray, upstream: str, rng: random.Random,
         return array
     merged = sorted(set(starts) | set(extra))
     spacings = [b - a for a, b in zip(merged, merged[1:], strict=False)]
+    if gene_spans is not None:
+        coding_repeat, rt_adjacent = _delimitation_flags(
+            merged, spacings, len(window), gene_spans, rt_offset)
+    elif merged[-1] > starts[-1]:
+        coding_repeat, rt_adjacent = False, None  # stale, unverifiable
+    else:
+        coding_repeat, rt_adjacent = array.coding_repeat, array.rt_adjacent
     return DelimitedArray(locus=array.locus, copy_starts=merged, repeat=array.repeat,
                           score=array.score, shuffles_used=array.shuffles_used,
-                          spacings=spacings, block_offset=off)  # offset must survive
+                          spacings=spacings, block_offset=off,  # offset must survive
+                          coding_repeat=coding_repeat, rt_adjacent=rt_adjacent)
 
 
 def cross_scan(arrays: list[DelimitedArray], upstreams: dict[str, str],
