@@ -19,8 +19,10 @@ acceptance criteria.
 
 from __future__ import annotations
 
+import threading
 from collections import deque
 from collections.abc import Callable
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -78,8 +80,9 @@ class Orchestrator:
         self.gates = gates
         self.triage = triage or (lambda brief, parent: (True, ""))
         self.queue: deque[str] = deque()
-        # UNIMPLEMENTED (paper ran <=58 concurrent sessions): dispatch is strictly
-        # sequential; cfg.max_concurrent_sessions is recorded, not enforced.
+        # Guards every write to shared campaign state (task creation, queue, report
+        # counters, ledger, triage bookkeeping). Backend sessions run OUTSIDE it.
+        self._lock = threading.RLock()
         self._proposed: set[tuple[str, str]] = set()
         self.report = CampaignReport()
 
@@ -118,15 +121,17 @@ class Orchestrator:
     # -- task creation / triage ------------------------------------------------
     def _new_task(self, stage: str, brief: str, origin: TaskOrigin,
                   parent: str | None = None, label: str = "") -> TaskRecord | None:
-        if len(self.store.list_tasks()) >= self.cfg.max_tasks_total:
-            self._reject_uncreated(brief, "task budget exhausted (max_tasks_total)")
-            return None
-        rec = self.store.create(self.store.next_task_id(len(self.store.list_tasks()) + 1),
-                                brief, stage, origin, parent=parent, label=label)
-        self.queue.append(rec.task_id)
-        if origin is TaskOrigin.FOLLOW_UP:
-            self.report.follow_ups += 1
-        return rec
+        with self._lock:
+            n = len(self.store.list_tasks())
+            if n >= self.cfg.max_tasks_total:
+                self._reject_uncreated(brief, "task budget exhausted (max_tasks_total)")
+                return None
+            rec = self.store.create(self.store.next_task_id(n + 1),
+                                    brief, stage, origin, parent=parent, label=label)
+            self.queue.append(rec.task_id)
+            if origin is TaskOrigin.FOLLOW_UP:
+                self.report.follow_ups += 1
+            return rec
 
     def _reject_uncreated(self, brief: str, reason: str) -> None:
         # Budget rejections are still "rejected with a written reason"; the reason is
@@ -137,24 +142,25 @@ class Orchestrator:
 
     def propose_followup(self, brief: str, parent: TaskRecord,
                          proposed_by: str = "worker") -> None:
-        # A revised task re-presents the same follow-ups on every pass; triage each
-        # distinct (parent, brief) once so revisions cannot multiply tasks.
-        key = (parent.task_id, brief)
-        if key in self._proposed:
-            return
-        self._proposed.add(key)
-        ok, reason = self.triage(brief, parent)
-        if ok:
-            self._new_task(parent.stage, brief, TaskOrigin.FOLLOW_UP, parent=parent.task_id,
-                           label=f"followup by {proposed_by}")
-        else:
-            self.report.rejected_at_triage += 1
-            seq = sum(1 for _ in
-                      self.store.records.glob(parent.task_id + "/triage-rejection-*.md")) + 1
-            self.store.write_text(
-                parent.task_id, f"triage-rejection-{seq}.md",
-                f"REJECTED AT TRIAGE\nreason: {reason}\n\nbrief:\n{brief}\n")
-            self.store.commit(f"triage({parent.task_id}): reject follow-up — {reason}")
+        with self._lock:
+            # A revised task re-presents the same follow-ups on every pass; triage each
+            # distinct (parent, brief) once so revisions cannot multiply tasks.
+            key = (parent.task_id, brief)
+            if key in self._proposed:
+                return
+            self._proposed.add(key)
+            ok, reason = self.triage(brief, parent)
+            if ok:
+                self._new_task(parent.stage, brief, TaskOrigin.FOLLOW_UP, parent=parent.task_id,
+                               label=f"followup by {proposed_by}")
+            else:
+                self.report.rejected_at_triage += 1
+                seq = sum(1 for _ in
+                          self.store.records.glob(parent.task_id + "/triage-rejection-*.md")) + 1
+                self.store.write_text(
+                    parent.task_id, f"triage-rejection-{seq}.md",
+                    f"REJECTED AT TRIAGE\nreason: {reason}\n\nbrief:\n{brief}\n")
+                self.store.commit(f"triage({parent.task_id}): reject follow-up — {reason}")
 
     # -- dispatch loop ------------------------------------------------------------
     def run(self) -> CampaignReport:
@@ -166,9 +172,26 @@ class Orchestrator:
         return self.report
 
     def _drain(self) -> None:
-        while self.queue:
-            rec = self.store.get(self.queue.popleft())
-            self._dispatch(rec)
+        workers = max(1, min(self.cfg.dispatch_concurrency,
+                             self.cfg.max_concurrent_sessions))
+        if workers == 1:
+            while self.queue:
+                self._dispatch(self.store.get(self.queue.popleft()))
+            return
+        # Tasks opened while others run (follow-ups) join the pool; a stage is drained
+        # only when nothing is queued AND nothing is in flight.
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            pending: set = set()
+            while True:
+                with self._lock:
+                    while self.queue:
+                        rec = self.store.get(self.queue.popleft())
+                        pending.add(pool.submit(self._dispatch, rec))
+                if not pending:
+                    return
+                done, pending = wait(pending, timeout=0.05, return_when=FIRST_COMPLETED)
+                for fut in done:
+                    fut.result()
 
     def _dispatch(self, rec: TaskRecord) -> None:
         # One loop per WORKER pass. Every pass — initial or revision — must pass
@@ -178,7 +201,7 @@ class Orchestrator:
         # completion-check stall mode was unreachable after any revision).
         while True:
             out = self.roles.worker(rec)
-            self.ledger.record(out.result)
+            self._record(out.result)
 
             summary = self.store.records / rec.task_id / "summary.md"
             if not summary.exists():
@@ -211,7 +234,7 @@ class Orchestrator:
             revise = True
             while revise:
                 sout = self.roles.supervisor(rec)
-                self.ledger.record(sout.result)
+                self._record(sout.result)
                 # supervisor-authored follow-up briefs enter triage too (paper
                 # A1: the t0010 supervisor wrote the t0062 brief that led to ART)
                 for fu in sout.proposed_followups:
@@ -242,16 +265,24 @@ class Orchestrator:
                 rec.status = TaskStatus.ACCEPTED
                 self.store.update(rec, f"task({rec.task_id}): supervisor accepted")
                 if rec.revisions >= 1:
-                    self.report.revised += 1
+                    self._bump("revised")
 
                 # curator enters findings into the shared knowledge base
                 cout = self.roles.curator(rec)
-                self.ledger.record(cout.result)
+                self._record(cout.result)
                 rec.status = TaskStatus.CURATED
                 self.store.update(rec, f"task({rec.task_id}): curated")
 
-                self.report.completed += 1
+                self._bump("completed")
                 return
+
+    def _bump(self, counter: str) -> None:
+        with self._lock:
+            setattr(self.report, counter, getattr(self.report, counter) + 1)
+
+    def _record(self, result) -> None:
+        with self._lock:
+            self.ledger.record(result)
 
     def _stall(self, rec: TaskRecord, mode: str) -> None:
         rec.status = TaskStatus.STALLED
@@ -259,8 +290,8 @@ class Orchestrator:
         if rec.revisions >= 1:
             # paper counts a task "revised >= 1x" whenever revisions happened,
             # including tasks that later stalled (49/119 figure)
-            self.report.revised += 1
-        self.report.stalled += 1
+            self._bump("revised")
+        self._bump("stalled")
 
     # -- reports -----------------------------------------------------------------
     def file_report(self, task_id: str, report_text: str) -> Path | None:
@@ -277,7 +308,7 @@ class Orchestrator:
                              f"complete first")
         draft = self.store.write_text(task_id, "report-draft.md", report_text)
         eout = self.roles.editor(task_id, draft)
-        self.ledger.record(eout.result)
+        self._record(eout.result)
         if eout.verdict != "yes":  # only an explicit yes files; None fails safe
             self.store.write_text(task_id, "report-review.md",
                                   f"FILE: no\n\n{eout.verdict_notes or ''}\n")
@@ -287,5 +318,5 @@ class Orchestrator:
         self.store.commit(f"report({task_id}): filed after editor review")
         rec.status = TaskStatus.COMPLETED
         self.store.update(rec, f"task({task_id}): report filed")
-        self.report.reports_filed += 1
+        self._bump("reports_filed")
         return final

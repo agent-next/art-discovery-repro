@@ -15,7 +15,7 @@ transcriptases with tandem repeat arrays". Facts ledger: `docs/paper-notes.md`.
 | 6 | Triage queue, release or reject with written reason | Methods p.28 | `Orchestrator.propose_followup` + `TriagePolicy`, `triage-rejection-*.md` | done |
 | 7 | Curator → shared knowledge base → relevant entries into later prompts | Methods p.28 | `knowledge.KnowledgeBase` (term-overlap retrieval) | done (retrieval scheme NOT-IN-PAPER) |
 | 8 | Editor review before filing reports | Methods p.28 | `Orchestrator.file_report`, `Roles.editor` | done |
-| 9 | Concurrency ≤58, sandbox 60 CPU/192 GiB/no GPU | Methods p.28 | `config.CampaignConfig` | done (values pinned by test); dispatch is sequential — concurrency UNIMPLEMENTED |
+| 9 | Concurrency ≤58, sandbox 60 CPU/192 GiB/no GPU | Methods p.28 | `config.CampaignConfig` | done (values pinned by test); threaded dispatch via `dispatch_concurrency` (NOT-IN-PAPER knob, default 1, capped at `max_concurrent_sessions`=58); overlap, cap and shared-state integrity tested with a scripted backend, never at 58 live sessions |
 | 10 | Connectors: protein DB, literature, KB, GPU queue | Methods p.28 | `connectors/` | done (offline-first clients; live lanes per connector header) |
 | 11 | ~140 skills; 7 survey guides named | Methods p.28 | `skills/` (12 guides; full 140-library out of scope) | done (GAP-2) |
 | 12 | Campaign accounting: sessions/roles, agent-hours, token classes | Methods p.30 | `accounting.SessionLedger` | done |
