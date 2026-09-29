@@ -65,8 +65,13 @@ class Roles:
     def worker(self, rec: TaskRecord) -> BackendOutput:
         brief = self.store.read_text(rec.task_id, "brief.md")
         kb_block = self.kb.context_block(brief)
+        # a revision pass must see why the supervisor returned the last one
+        verdicts = sorted((self.store.records / rec.task_id).glob("verdict-r*.md"),
+                          key=lambda p: int(p.stem.rsplit("-r", 1)[1]))
+        feedback = (f"## supervisor feedback to address (revision {rec.revisions})\n"
+                    f"{verdicts[-1].read_text()}\n") if verdicts else ""
         prompt = (
-            f"# Task {rec.task_id} ({rec.stage})\n\n{brief}\n\n{kb_block}"
+            f"# Task {rec.task_id} ({rec.stage})\n\n{brief}\n\n{feedback}{kb_block}"
             "Submit plan.md, summary.md, and artifacts. Propose follow-ups if warranted."
         )
         out = self.backend.run(SessionSpec(
