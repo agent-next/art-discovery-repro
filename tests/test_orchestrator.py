@@ -228,3 +228,27 @@ def test_launch_session_recorded_and_task_mix(tmp_path: Path):
     assert mix == {"assembly": 1, "analysis": 2}
     rec = store.list_tasks()[0]
     assert rec.kind.value == "assembly"
+
+
+def test_revision_cascade_is_bounded_by_followup_dedup(tmp_path: Path):
+    # Internal-audit finding 7 (2026-09-28): a revised task re-presenting the
+    # SAME follow-up on every pass used to multiply tasks (offline repro hit
+    # max_tasks_total=500 with 499 identical briefs). The (parent, brief)
+    # dedup in propose_followup must bound the cascade: one seed task that
+    # always proposes one identical follow-up and always gets revised must
+    # produce exactly ONE follow-up task, never a chain.
+    # drive the orchestrator API directly: the cascade is a property of
+    # propose_followup + revisions, not of the backend
+    orch, store, ledger, _ = make_orch(tmp_path)
+    orch.run_stage_chain({STAGES[0]: ["seed brief"]})
+    seed = store.list_tasks()[0]
+    for _ in range(20):  # 20 revision passes, same follow-up each time
+        orch.propose_followup("identical follow-up brief", seed)
+    follow_ups = [r for r in store.list_tasks()
+                  if r.origin.value == "follow_up"]
+    assert len(follow_ups) == 1, [r.brief for r in follow_ups]
+    # distinct briefs still open their own tasks
+    orch.propose_followup("a different follow-up brief", seed)
+    follow_ups = [r for r in store.list_tasks()
+                  if r.origin.value == "follow_up"]
+    assert len(follow_ups) == 2
