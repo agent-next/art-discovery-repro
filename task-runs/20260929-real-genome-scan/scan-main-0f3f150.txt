@@ -1,0 +1,30 @@
+
+== ENA|MW248466|MW248466.1 (266,637 nt): 50 array(s) pass shuffle control
+  pos 213,994-214,801  R=5 copies  span=0.81 kb  seed=ATATGAATACGTAT  shuffle_max=0
+  pos 90,954-92,020  R=5 copies  span=1.07 kb  seed=AGAAAATTAAAAAT  shuffle_max=3
+  pos 113,422-114,562  R=4 copies  span=1.14 kb  seed=ATATTATAATAATG  shuffle_max=0
+  pos 15,861-16,733  R=4 copies  span=0.87 kb  seed=TTAAAAATGATAAA  shuffle_max=3
+  pos 124,805-125,760  R=4 copies  span=0.95 kb  seed=TTTAATGAAATTAA  shuffle_max=0
+  pos 109,871-110,984  R=4 copies  span=1.11 kb  seed=AAGAATTAAATGAA  shuffle_max=0
+  pos 134,068-135,345  R=4 copies  span=1.28 kb  seed=AATGAAGATTATGA  shuffle_max=0
+  pos 58,341-58,723  R=3 copies  span=0.38 kb  seed=GTTCAACGACTAAA  shuffle_max=0
+
+== ENA|MW218148|MW218148.1 (260,727 nt): 26 array(s) pass shuffle control
+  pos 9,597-10,371  R=5 copies  span=0.77 kb  seed=ATATGAATACGTAT  shuffle_max=0
+  pos 17,438-18,201  R=4 copies  span=0.76 kb  seed=AAATTAAAAGAAAA  shuffle_max=3
+  pos 82,246-82,718  R=3 copies  span=0.47 kb  seed=ATATTATAAAAATG  shuffle_max=0
+  pos 172,446-173,273  R=3 copies  span=0.83 kb  seed=AAGTATATATTATA  shuffle_max=0
+  pos 26,453-26,777  R=3 copies  span=0.32 kb  seed=ATTAAAAGAAAAAG  shuffle_max=0
+  pos 72,126-72,910  R=3 copies  span=0.78 kb  seed=TAATAATGAAGATA  shuffle_max=0
+  pos 161,297-161,827  R=3 copies  span=0.53 kb  seed=TATTAAGAAATTAA  shuffle_max=0
+  pos 194,717-195,025  R=3 copies  span=0.31 kb  seed=AAAGAAGATAAAAA  shuffle_max=0
+
+== ENA|MW349129|MW349129.1 (265,446 nt): 57 array(s) pass shuffle control
+  pos 213,195-214,001  R=5 copies  span=0.81 kb  seed=ATATGAATACGTAT  shuffle_max=0
+  pos 261,471-262,288  R=5 copies  span=0.82 kb  seed=AAAGAAAATAAAAA  shuffle_max=4
+  pos 112,790-113,945  R=4 copies  span=1.16 kb  seed=ATATTATAATAATG  shuffle_max=0
+  pos 60,565-61,460  R=4 copies  span=0.9 kb  seed=ATGAAATTAATAAA  shuffle_max=3
+  pos 15,746-16,322  R=4 copies  span=0.58 kb  seed=AAAGAAAATGAAAA  shuffle_max=3
+  pos 109,545-110,654  R=4 copies  span=1.11 kb  seed=AAGAATTAAATGAA  shuffle_max=0
+  pos 132,899-134,176  R=4 copies  span=1.28 kb  seed=AATGAAGATTATGA  shuffle_max=0
+  pos 253,190-254,092  R=4 copies  span=0.9 kb  seed=AATGAATTATTTAA  shuffle_max=0
