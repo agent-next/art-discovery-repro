@@ -184,3 +184,31 @@ def test_report_editor_gate(tmp_path: Path):
     assert "FILE: no" in store.read_text("t0002", "report-review.md")
     assert orch.report.reports_filed == 1
     assert store.get("t0002").status is TaskStatus.CURATED  # unchanged by rejection
+
+
+class RevisedTaskRepeatsFollowup(ScriptedBackend):
+    """Task t0001's worker proposes the same follow-up on every pass and the
+    supervisor revises once before accepting."""
+
+    def __init__(self):
+        super().__init__()
+        self.supervisor_calls = 0
+
+    def run(self, spec):
+        out = super().run(spec)
+        if spec.role == "worker" and spec.task_id == "t0001":
+            out.proposed_followups = ["follow up on X"]
+        if spec.role == "supervisor" and spec.task_id == "t0001":
+            self.supervisor_calls += 1
+            if self.supervisor_calls == 1:
+                out.verdict = "revise"
+        return out
+
+
+def test_revision_passes_do_not_duplicate_followups(tmp_path: Path):
+    orch, store, _, _ = make_orch(tmp_path, backend=RevisedTaskRepeatsFollowup())
+    orch.run_stage_chain({STAGES[0]: ["seed"]})
+    tasks = store.list_tasks()
+    assert store.get("t0001").revisions == 1  # two worker passes happened
+    assert [t.origin for t in tasks].count(TaskOrigin.FOLLOW_UP) == 1
+    assert orch.report.follow_ups == 1
