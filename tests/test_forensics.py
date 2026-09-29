@@ -137,3 +137,25 @@ def test_typed_identifier_sets_rt_vs_contig(tmp_path):
     # the event-walk gate: which named identifiers are contigs
     assert sets.contig_named({"L0050", "RTX_001"}) == {"L0050"}
     assert sets.contig_named({"RTX_001"}) == set()
+
+
+def test_contig_gate_limits_event_walk(tmp_path):
+    # devin round-3: contig_named() existed but was never wired — paper p.38
+    # parses event-by-event ONLY the sessions naming a contig.
+    mod = _load()
+    (tmp_path / "rt.txt").write_text("RTX_001\n")
+    (tmp_path / "contigs.txt").write_text("L0050\n")
+    sets = mod.load_identifier_sets(tmp_path / "rt.txt", tmp_path / "contigs.txt")
+    (tmp_path / "sessions").mkdir()
+    dna = "".join("ACGT" for _ in range(60))  # 240-nt run
+    (tmp_path / "sessions" / "s_contig.log").write_text(
+        f"looking at L0050\n{dna}\nthat tandem repeat array is striking\n")
+    (tmp_path / "sessions" / "s_rt_only.log").write_text(
+        f"checking RTX_001\n{dna}\nthat tandem repeat array is striking\n")
+    rows = mod.scan_transcripts(tmp_path / "sessions", sets.all,
+                                contig_ids=sets.contig_ids)
+    by = {r["transcript"].split("/")[-1]: r for r in rows}
+    assert by["s_contig.log"]["gate"] == "contig_named"  # event walk runs
+    assert by["s_contig.log"]["repeat_remarks"] >= 1
+    assert by["s_rt_only.log"]["gate"] == "no_contig_named"  # skipped
+    assert by["s_rt_only.log"]["repeat_remarks"] == 0

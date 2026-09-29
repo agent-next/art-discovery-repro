@@ -107,7 +107,8 @@ def scan_records(records_root: Path, ids: set[str]) -> dict[str, list[str]]:
     return hits
 
 
-def scan_transcripts(transcripts_root: Path, ids: set[str]) -> list[dict]:
+def scan_transcripts(transcripts_root: Path, ids: set[str],
+                     contig_ids: set[str] | None = None) -> list[dict]:
     """Per transcript naming an identifier: ordered event walk — a repeat remark
     counts as 'downstream of DNA retrieval' only when a >=200-nt DNA run appeared
     earlier in the transcript (paper p.38; grok round-2 finding 9). Identifiers
@@ -121,6 +122,19 @@ def scan_transcripts(transcripts_root: Path, ids: set[str]) -> list[dict]:
         named = sorted(i for i in ids
                        if re.search(rf"\b{re.escape(i)}\b", "\n".join(lines)))
         if not named:
+            continue
+        # paper p.38: only sessions naming a CONTIG are parsed event-by-event;
+        # when contig_ids is supplied, others are recorded gated, un-walked
+        if contig_ids is not None and not (set(named) & contig_ids):
+            out.append({
+                "transcript": str(tf),
+                "identifiers": named,
+                "gate": "no_contig_named",
+                "dna_runs_ge200nt": 0,
+                "repeat_remarks": 0,
+                "repeat_remarks_after_dna": 0,
+                "repeat_remark_samples": [],
+            })
             continue
         dna_seen_at: list[int] = []
         repeat_remarks = 0
@@ -147,6 +161,7 @@ def scan_transcripts(transcripts_root: Path, ids: set[str]) -> list[dict]:
         out.append({
             "transcript": str(tf),
             "identifiers": named,
+            "gate": "contig_named" if contig_ids is not None else "all",
             "dna_runs_ge200nt": len(dna_seen_at),
             "repeat_remarks": repeat_remarks,
             "repeat_remarks_after_dna": remark_after_dna,
