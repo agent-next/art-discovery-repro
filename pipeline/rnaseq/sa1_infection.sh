@@ -122,20 +122,22 @@ while IFS= read -r acc; do
         -i "$OUT/fastq/${acc}_1.fastq" -I "$OUT/fastq/${acc}_2.fastq" \
         -o "$OUT/trim/${acc}_1.fq.gz" -O "$OUT/trim/${acc}_2.fq.gz"
     # paper: Bowtie2 --very-sensitive -X 1000 --no-unal vs SA1 + host
-    run bowtie2 --very-sensitive -X 1000 --no-unal -x "$OUT/bt2_sa1_host" -p "$THREADS" \
-        -1 "$OUT/trim/${acc}_1.fq.gz" -2 "$OUT/trim/${acc}_2.fq.gz" \
-        -S "$OUT/bam/${acc}.sam"
     # paper: "Properly paired alignments with MAPQ of at least 10 and a template
     # of at most 1,500 nt were retained as fragments." Flags verified against the
     # htslib samtools-view manual: -f/--require-flags (0x2 = proper pair),
     # -e/--expr with the documented `tlen` variable.
-    run samtools view -b -q 10 -f 2 -e 'tlen <= 1500 && tlen >= -1500' -@ "$THREADS" \
-        -o "$OUT/bam/${acc}.bam" "$OUT/bam/${acc}.sam"
+    # NOT-IN-PAPER plumbing: the aligner streams into the filter instead of
+    # writing an intermediate SAM (~13 GB per library here); same tools, same flags.
+    run bash -c 'set -o pipefail
+        bowtie2 --very-sensitive -X 1000 --no-unal -x "$1" -p "$2" -1 "$3" -2 "$4" |
+        samtools view -b -q 10 -f 2 -e "tlen <= 1500 && tlen >= -1500" -@ "$2" -o "$5" -' \
+        bash "$OUT/bt2_sa1_host" "$THREADS" "$OUT/trim/${acc}_1.fq.gz" \
+        "$OUT/trim/${acc}_2.fq.gz" "$OUT/bam/${acc}.bam"
     run samtools sort -o "$OUT/bam/${acc}.sorted.bam" -@ "$THREADS" "$OUT/bam/${acc}.bam"
     if [[ "${KEEP_INTERMEDIATES:-1}" == 0 ]]; then
         run rm -rf "$OUT/fastq/${acc}" "$OUT/fastq/${acc}_1.fastq" "$OUT/fastq/${acc}_2.fastq" \
             "$OUT/trim/${acc}_1.fq.gz" "$OUT/trim/${acc}_2.fq.gz" \
-            "$OUT/bam/${acc}.sam" "$OUT/bam/${acc}.bam"
+            "$OUT/bam/${acc}.bam"
     fi
 done < <(acc_stream)
 

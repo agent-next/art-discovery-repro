@@ -68,8 +68,18 @@ def test_keep_intermediates_zero_deletes_only_this_librarys_scratch(tmp_path: Pa
                          capture_output=True, text=True, env=env).stdout
     rm = [ln for ln in out.splitlines() if ln.startswith("rm -rf")]
     assert len(rm) == 1
-    assert "out/bam/SRR19152328.sam" in rm[0] and "out/trim/SRR19152328_1.fq.gz" in rm[0]
+    assert "out/bam/SRR19152328.bam" in rm[0] and "out/trim/SRR19152328_1.fq.gz" in rm[0]
     assert "sorted.bam" not in rm[0]
     keep = subprocess.run(["bash", str(SCRIPT), "--dry-run", str(accs)], capture_output=True,
                           text=True, env={**env, "KEEP_INTERMEDIATES": "1"}).stdout
     assert "rm -rf" not in keep
+
+
+def test_aligner_streams_into_the_filter_without_an_intermediate_sam(tmp_path: Path):
+    accs = tmp_path / "acc.txt"
+    accs.write_text("SRR19152328\n")
+    out = subprocess.run(["bash", str(SCRIPT), "--dry-run", str(accs)],
+                         capture_output=True, text=True).stdout
+    assert ".sam" not in out and "-S " not in out
+    assert "bowtie2 --very-sensitive -X 1000 --no-unal" in out and "|" in out
+    assert "samtools view -b -q 10 -f 2" in out
