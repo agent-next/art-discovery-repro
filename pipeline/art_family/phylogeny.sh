@@ -30,17 +30,8 @@ INPUT_FAA="${POS[0]:-${INPUT_FAA:-data/art_family/rt_774.faa}}"
 OUT="${POS[1]:-${OUTDIR:-results/art_family/phylogeny}}"
 RVT1_HMM="${RVT1_HMM:-data/hmm/RVT_1.hmm}"
 
-# SECURITY-NOTE (S3b 2026-09-24): eval sink. Inputs are operator-controlled today
-# (env vars / positional args, not data files). Convert to "$@" argument form
-# before ever interpolating data-derived values here. See sa1_infection.sh
-# for the converted pattern.
-run() {
-    if [[ "$DRY_RUN" -eq 1 ]]; then
-        printf '%s\n' "$1"
-    else
-        eval "$1"
-    fi
-}
+# shellcheck source=../lib/run.sh
+source "$(dirname "${BASH_SOURCE[0]}")/../lib/run.sh"
 
 if [[ "$DRY_RUN" -eq 0 ]]; then
     mkdir -p "$OUT"
@@ -49,20 +40,23 @@ fi
 # paper: RT domain = Pfam RVT_1 envelope +/- 40 residues
 # NOT-IN-PAPER: envelope extraction plumbing (domtblout env coords 20/21, bed
 # is 0-based half-open).
-run "hmmsearch --noali --domtblout \"$OUT/rvt1.domtbl\" -o /dev/null \"$RVT1_HMM\" \"$INPUT_FAA\""
-run "awk '!/^#/ {s=\$20-40; if (s<1) s=1; print \$1\"\t\"s-1\"\t\"\$21+40}' \"$OUT/rvt1.domtbl\" | sort -u > \"$OUT/rvt1_env.bed\""
-run "seqkit subseq --bed \"$OUT/rvt1_env.bed\" \"$INPUT_FAA\" > \"$OUT/rt_domain.faa\""
+run hmmsearch --noali --domtblout "$OUT/rvt1.domtbl" -o /dev/null "$RVT1_HMM" "$INPUT_FAA"
+run_sh "$(cat <<'EOS'
+awk '!/^#/ {s=$20-40; if (s<1) s=1; print $1"\t"s-1"\t"$21+40}' "$1" | sort -u > "$2"
+EOS
+)" "$OUT/rvt1.domtbl" "$OUT/rvt1_env.bed"
+run_sh 'seqkit subseq --bed "$1" "$2" > "$3"' "$OUT/rvt1_env.bed" "$INPUT_FAA" "$OUT/rt_domain.faa"
 
 # paper: MAFFT L-INS-i (--localpair --maxiterate 1000)
-run "mafft --localpair --maxiterate 1000 \"$OUT/rt_domain.faa\" > \"$OUT/rt_domain.aln.faa\""
+run_sh 'mafft --localpair --maxiterate 1000 "$1" > "$2"' "$OUT/rt_domain.faa" "$OUT/rt_domain.aln.faa"
 
 # paper: trimal -gappyout -> 254 columns
-run "trimal -gappyout -in \"$OUT/rt_domain.aln.faa\" -out \"$OUT/rt_domain.trim.faa\""
+run trimal -gappyout -in "$OUT/rt_domain.aln.faa" -out "$OUT/rt_domain.trim.faa"
 
 # paper: IQ-TREE 3.1.2; ModelFinder with BIC (-m MFP) selected Q.pfam+F+R6;
 # 1,000 ultrafast bootstrap (-B 1000) + 1,000 SH-aLRT (-alrt 1000)
-run "iqtree3 -s \"$OUT/rt_domain.trim.faa\" -m MFP -B 1000 -alrt 1000 -T AUTO --prefix \"$OUT/rt_tree\""
+run iqtree3 -s "$OUT/rt_domain.trim.faa" -m MFP -B 1000 -alrt 1000 -T AUTO --prefix "$OUT/rt_tree"
 
 # paper: midpoint rooted
 # NOT-IN-PAPER: gotree for the rooting step (paper states midpoint only)
-run "gotree reroot midpoint -i \"$OUT/rt_tree.treefile\" -o \"$OUT/rt_tree.midpoint.nwk\""
+run gotree reroot midpoint -i "$OUT/rt_tree.treefile" -o "$OUT/rt_tree.midpoint.nwk"

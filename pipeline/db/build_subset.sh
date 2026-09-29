@@ -32,17 +32,8 @@ done
 GENOME_FNA="${POS[0]:-${GENOME_FNA:-data/db/genomes.fna}}"
 OUT="${POS[1]:-${OUTDIR:-results/db}}"
 
-# SECURITY-NOTE (S3b 2026-09-24): eval sink. Inputs are operator-controlled today
-# (env vars / positional args, not data files). Convert to "$@" argument form
-# before ever interpolating data-derived values here. See sa1_infection.sh
-# for the converted pattern.
-run() {
-    if [[ "$DRY_RUN" -eq 1 ]]; then
-        printf '%s\n' "$1"
-    else
-        eval "$1"
-    fi
-}
+# shellcheck source=../lib/run.sh
+source "$(dirname "${BASH_SOURCE[0]}")/../lib/run.sh"
 
 # Apply the paper's sequence filters; writes filtered FASTA.
 # NOT-IN-PAPER: filter implementation is ours (stdlib python over prodigal-gv
@@ -142,11 +133,11 @@ if [[ "$DRY_RUN" -eq 0 ]]; then
 fi
 
 # paper: prodigal-gv 2.10.0, default parameters
-run "prodigal-gv -i \"$GENOME_FNA\" -a \"$OUT/proteins_raw.faa\""
+run prodigal-gv -i "$GENOME_FNA" -a "$OUT/proteins_raw.faa"
 
 # paper: >=50% low-complexity via tantan (tantan masks low-complexity as
 # lowercase; -x X alternative noted)
-run "tantan \"$OUT/proteins_raw.faa\" > \"$OUT/proteins_tantan.faa\""
+run_sh 'tantan "$1" > "$2"' "$OUT/proteins_raw.faa" "$OUT/proteins_tantan.faa"
 
 # paper filters: incomplete CDS, non-standard amino acids, >8,000 residues,
 # degenerate k-mer repeats, >=50% low-complexity
@@ -163,27 +154,27 @@ fi
 # `diamond cluster` coverage flags are --member-cover / --mutual-cover (percents);
 # --cov-mode is not a diamond cluster option (grok review 2026-09-24)
 # coverage follow the mmseqs convention -- verify against the installed release.
-run "diamond makedb --in \"$OUT/proteins_filt.faa\" -d \"$OUT/proteins_filt\""
-run "diamond cluster -d \"$OUT/proteins_filt.dmnd\" -o \"$OUT/clusters90.tsv\" --approx-id 90 --member-cover 80"
+run diamond makedb --in "$OUT/proteins_filt.faa" -d "$OUT/proteins_filt"
+run diamond cluster -d "$OUT/proteins_filt.dmnd" -o "$OUT/clusters90.tsv" --approx-id 90 --member-cover 80
 if [[ "$DRY_RUN" -eq 1 ]]; then
     echo "python3 - $OUT/clusters90.tsv $OUT/proteins_filt.faa $OUT/reps90.ids  # rep = member closest to 80th pct of length"
 else
     select_reps "$OUT/clusters90.tsv" "$OUT/proteins_filt.faa" "$OUT/reps90.ids"
 fi
-run "seqkit grep -f \"$OUT/reps90.ids\" \"$OUT/proteins_filt.faa\" > \"$OUT/reps90.faa\""
-run "diamond makedb --in \"$OUT/reps90.faa\" -d \"$OUT/reps90\""
-run "diamond cluster -d \"$OUT/reps90.dmnd\" -o \"$OUT/clusters70.tsv\" --approx-id 70 --member-cover 80"
+run_sh 'seqkit grep -f "$1" "$2" > "$3"' "$OUT/reps90.ids" "$OUT/proteins_filt.faa" "$OUT/reps90.faa"
+run diamond makedb --in "$OUT/reps90.faa" -d "$OUT/reps90"
+run diamond cluster -d "$OUT/reps90.dmnd" -o "$OUT/clusters70.tsv" --approx-id 70 --member-cover 80
 if [[ "$DRY_RUN" -eq 1 ]]; then
     echo "python3 - $OUT/clusters70.tsv $OUT/reps90.faa $OUT/reps70.ids  # rep = member closest to 80th pct of length"
 else
     select_reps "$OUT/clusters70.tsv" "$OUT/reps90.faa" "$OUT/reps70.ids"
 fi
-run "seqkit grep -f \"$OUT/reps70.ids\" \"$OUT/reps90.faa\" > \"$OUT/reps70.faa\""
-run "diamond makedb --in \"$OUT/reps70.faa\" -d \"$OUT/reps70\""
-run "diamond cluster -d \"$OUT/reps70.dmnd\" -o \"$OUT/clusters50.tsv\" --approx-id 50 --mutual-cover 80"
+run_sh 'seqkit grep -f "$1" "$2" > "$3"' "$OUT/reps70.ids" "$OUT/reps90.faa" "$OUT/reps70.faa"
+run diamond makedb --in "$OUT/reps70.faa" -d "$OUT/reps70"
+run diamond cluster -d "$OUT/reps70.dmnd" -o "$OUT/clusters50.tsv" --approx-id 50 --mutual-cover 80
 if [[ "$DRY_RUN" -eq 1 ]]; then
     echo "python3 - $OUT/clusters50.tsv $OUT/reps70.faa $OUT/subset_reps.ids  # final subset representatives (80th pct of length)"
 else
     select_reps "$OUT/clusters50.tsv" "$OUT/reps70.faa" "$OUT/subset_reps.ids"
 fi
-run "seqkit grep -f \"$OUT/subset_reps.ids\" \"$OUT/proteins_filt.faa\" > \"$OUT/subset.faa\""
+run_sh 'seqkit grep -f "$1" "$2" > "$3"' "$OUT/subset_reps.ids" "$OUT/proteins_filt.faa" "$OUT/subset.faa"
