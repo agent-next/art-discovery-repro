@@ -110,14 +110,16 @@ def classify_profile(query_name: str) -> str:
 
 
 def parse_hmmsearch_domtbl(path: str | Path) -> Iterator[Hit]:
-    """Yield one Hit per target, keeping its highest-bitscore domain line.
+    """Yield one Hit per target: its best profile by best-domain bitscore, with
+    coverage taken over the union of that profile's domain lines.
 
     HMMER3 domtblout columns used: target name (0), tlen (2), query name (3),
     qlen (5), domain bitscore (13), hmm from/to (15/16) — model coordinates —
     for profile coverage (envelope cols 20/21 are sequence coords; grok
     review 2026-09-24).
     """
-    best: dict[str, Hit] = {}
+    best_dom: dict[tuple[str, str], Hit] = {}
+    spans: dict[tuple[str, str], list[tuple[int, int]]] = {}
     with Path(path).open() as fh:
         for line in fh:
             if not line.strip() or line.startswith("#"):
@@ -139,10 +141,30 @@ def parse_hmmsearch_domtbl(path: str | Path) -> Iterator[Hit]:
                 coverage=(hmm_to - hmm_from + 1) / qlen,
                 rt_class=classify_profile(f[3]),
             )
-            prev = best.get(hit.target)
+            key = (hit.target, hit.query)
+            spans.setdefault(key, []).append((hmm_from, hmm_to))
+            prev = best_dom.get(key)
             if prev is None or hit.bitscore > prev.bitscore:
-                best[hit.target] = hit
+                best_dom[key] = hit
+    best: dict[str, Hit] = {}
+    for key, hit in best_dom.items():
+        # An RT core split by an insertion is reported as several domains of one
+        # profile; the core is covered when their model columns jointly are.
+        hit.coverage = _union_length(spans[key]) / hit.qlen
+        prev = best.get(hit.target)
+        if prev is None or hit.bitscore > prev.bitscore:
+            best[hit.target] = hit
     yield from best.values()
+
+
+def _union_length(intervals: list[tuple[int, int]]) -> int:
+    total, end = 0, 0
+    for lo, hi in sorted(intervals):
+        lo = max(lo, end + 1)
+        if hi >= lo:
+            total += hi - lo + 1
+            end = hi
+    return total
 
 
 def is_weak_hit(hit: Hit, thresholds: Thresholds) -> bool:
