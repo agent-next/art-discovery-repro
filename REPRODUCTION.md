@@ -23,7 +23,7 @@ transcriptases with tandem repeat arrays". Facts ledger: `docs/paper-notes.md`.
 | 14 | RT census: 52 HMMs → 203,381 → 198,290 clusters → 9 classes | Methods p.29 | `pipeline/census/01–04` | done |
 | 15 | Neighborhood sampling: 7,308 anchors → 10,983 loci | Methods p.29-30 | `pipeline/census/05` | done + tests (`test_pipeline_logic`) |
 | 16 | Partner scoring: 3 filters, controls, 3,564 → 16 | Methods p.30 | `pipeline/census/06` | done + tests (`test_pipeline_logic`) |
-| 17 | ART family definition: QQM14740.1 → 95 members | Methods p.31-32 | `pipeline/art_family/family_definition.sh` | done as a flag-exact wrapper (dry-run + flag tests); never run on real data; two GAPs noted in the script header |
+| 17 | ART family definition: QQM14740.1 → 95 members | Methods p.31-32 | `pipeline/art_family/family_definition.sh` | done as a flag-exact wrapper (dry-run + flag tests); cluster representative = member on the longest contig (`longest_contig_reps.py`, unit-tested); never run on real data |
 | 18 | k-mer array scan (20×14-mer seeds, shuffles, R≥3) | Methods p.32 | `artharness.arrays.kmer_scan` | done + tests |
 | 19 | Array delimitation (10-mer, 30% tol, 200/2000 shuffles, PWM) | Methods p.32 | `artharness.arrays.delimit_array` + `pwm_extend` + `cross_scan` | done + tests |
 | 20 | Phylogeny: 774 set, MAFFT L-INS-i, IQ-TREE Q.pfam+F+R6 | Methods p.33 | `pipeline/art_family/phylogeny.sh` | done as a flag-exact wrapper (dry-run + flag tests); never run on real data |

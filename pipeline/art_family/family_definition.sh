@@ -11,7 +11,8 @@
 #     connected component containing the MarsHill RT = 117 proteins (no
 #     reference RT)
 #   * expand clusters, add members >= 400 aa (706 further) -> 823 full-length RTs
-#   * mmseqs easy-cluster --min-seq-id 0.9 -c 0.8 -> 230 clusters
+#   * mmseqs easy-cluster --min-seq-id 0.9 -c 0.8 -> 230 clusters; the member on
+#     the longest contig represents each cluster
 #   * FAMSA alignment + FastTree LG
 #   * ART clade = smallest clade containing every locus with a type I partner
 #     and >=500 nt of non-coding upstream; 95 representatives ART_01..ART_95
@@ -23,7 +24,9 @@
 #   SEED_ID       accession inside SEED_FAA            (default QQM14740.1)
 #   PHAGE_RT_FAA  12 GenBank phage RTs (paper: 10 Staphylococcus + 2 LPJP1)
 #   MYRT_REF_FAA  2,019 myRT reference RTs (paper)
-#   SEARCHDB_FAA  protein search database
+#   SEARCHDB_FAA  protein search database (metagenomic database representatives)
+#   GENBANK_BLASTDB  BLAST protein database of GenBank (makeblastdb output prefix)
+#   CONTIG_LEN_TSV   protein_id<TAB>contig length for every clustered member
 #   CLUST_TSV     precomputed cluster table (rep<TAB>member) for the expansion
 #   GENOMES_FNA   genomes/contigs for geNomad
 #   GENOMAD_DB    geNomad database dir (paper: release 1.9)
@@ -44,6 +47,8 @@ SEED_ID="${SEED_ID:-QQM14740.1}"
 PHAGE_RT_FAA="${PHAGE_RT_FAA:-data/art_family/phage_rt_12.faa}"
 MYRT_REF_FAA="${MYRT_REF_FAA:-data/art_family/myrt_ref_2019.faa}"
 SEARCHDB_FAA="${SEARCHDB_FAA:-data/seq/seqdb.faa}"
+GENBANK_BLASTDB="${GENBANK_BLASTDB:-data/blastdb/genbank_protein}"
+CONTIG_LEN_TSV="${CONTIG_LEN_TSV:-data/art_family/contig_len.tsv}"
 CLUST_TSV="${CLUST_TSV:-results/census/clu_cluster.tsv}"
 GENOMES_FNA="${GENOMES_FNA:-data/art_family/genomes.fna}"
 GENOMAD_DB="${GENOMAD_DB:-data/genomad_db_1.9}"
@@ -84,15 +89,14 @@ if [[ "$DRY_RUN" -eq 0 ]]; then
 fi
 
 # --- seed BLASTP ----------------------------------------------------------
-# paper: BLASTP seeded from the MarsHill RT (GenBank QQM14740.1) collects
-# homologs FROM GENBANK -- a separate source from the metagenomic DB searched
-# by the profile HMM below.
-# GAP (S1 review): this output is currently UNUSED downstream -- the paper's
-# GenBank-homolog branch is not wired into the 4,379-protein pool yet; the
-# step is kept because the paper names it, but do not count it as reproduced.
+# paper: homologs of the MarsHill RT (GenBank QQM14740.1) were collected FROM
+# GENBANK with BLASTP and, separately, from the metagenomic database with the
+# profile HMM below. The paper's pool (4,379 database hits + 12 phage RTs + 2,019
+# myRT references) does not contain the BLASTP hits: this branch supplies the
+# GenBank phage RTs (the 12 profile sequences, and the "cultured phage" class).
 # GAP: BLASTP parameters are not stated; -evalue 1e-5 mirrors the paper's
 # hmmsearch threshold below, outfmt 6 plumbing is ours.
-run blastp -query "$SEED_FAA" -db "$SEARCHDB_FAA" -evalue 1e-5 -outfmt 6 -out "$OUT/seed_blastp.tsv"
+run blastp -query "$SEED_FAA" -db "$GENBANK_BLASTDB" -evalue 1e-5 -outfmt 6 -out "$OUT/seed_blastp.tsv"
 
 # --- phage-RT profile HMM ---------------------------------------------------
 # paper: profile HMM from 12 GenBank phage RTs (10 Staphylococcus + 2 Listeria
@@ -144,18 +148,16 @@ run_sh 'seqkit grep -f "$1" "$2" | seqkit seq -m 400 > "$3"' "$OUT/expanded.ids"
 run_sh 'cat "$1" "$2" | seqkit rmdup -s > "$3"' "$OUT/component117.faa" "$OUT/expanded_400.faa" "$OUT/art_823.faa"
 
 # --- 90% clustering --------------------------------------------------------------------
-# paper: mmseqs easy-cluster --min-seq-id 0.9 -c 0.8 -> 230 clusters
-# GAP (S1 review): the paper takes the member on the LONGEST CONTIG as each
-# cluster's representative ("the member on the longest contig was taken as the
-# representative of each cluster", Methods p.31); MMseqs' own representative
-# choice follows similarity/length heuristics. The representative sequence
-# differs, so the 230-leaf tree and the ART_01..95 numbering are not faithful
-# until a contig-length-aware selection step replaces _clu_rep_seq below.
+# paper: mmseqs easy-cluster --min-seq-id 0.9 -c 0.8 -> 230 clusters; "the member
+# on the longest contig was taken as the representative of each cluster"
+# (Methods p.31), replacing MMseqs' own representative.
 run mmseqs easy-cluster "$OUT/art_823.faa" "$OUT/art_823_clu" "$OUT/tmp_mmseqs" --min-seq-id 0.9 -c 0.8
+run python3 "$(dirname "${BASH_SOURCE[0]}")/longest_contig_reps.py" "$OUT/art_823_clu_cluster.tsv" "$CONTIG_LEN_TSV" "$OUT/art_reps.ids"
+run_sh 'seqkit grep -f "$1" "$2" > "$3"' "$OUT/art_reps.ids" "$OUT/art_823.faa" "$OUT/art_reps.faa"
 
 # --- representative alignment + tree -----------------------------------------------------
 # paper: FAMSA alignment + FastTree LG (over the 230 cluster representatives)
-run famsa "$OUT/art_823_clu_rep_seq.fasta" "$OUT/art_reps.famsa.aln"
+run famsa "$OUT/art_reps.faa" "$OUT/art_reps.famsa.aln"
 run_sh 'FastTree -lg "$1" > "$2"' "$OUT/art_reps.famsa.aln" "$OUT/art_reps.nwk"
 
 # --- ART clade -----------------------------------------------------------------------------
