@@ -42,3 +42,34 @@ def test_knowledge_retrieval_and_context_block(tmp_path: Path):
     block = kb.context_block("crRNA guides from arrays")
     assert "CRISPR arrays" in block and "relevance" in block
     assert kb.context_block("completely unrelated quantum coffee") == ""
+
+
+def test_git_backed_store_commits_the_trail(tmp_path):
+    # Audit finding 5: the default use_git=True path had ZERO tests — every
+    # test in the suite disabled it, so a broken commit() would ship green.
+    # Real oracle: a real git repo (init in tmp), a task transition, then
+    # `git log`/`git show` must contain the transition in a commit.
+    import subprocess
+
+    root = tmp_path / "camp"
+    root.mkdir()
+    # -b campaign: the host's global git-guard refuses commits on a branch
+    # named 'main' (fresh inits default to it); the store's trail mechanics
+    # are the test subject, not the guard
+    subprocess.run(["git", "init", "-q", "-b", "campaign"], cwd=root, check=True)
+    subprocess.run(["git", "config", "user.email", "t@example.com"], cwd=root, check=True)
+    subprocess.run(["git", "config", "user.name", "t"], cwd=root, check=True)
+
+    store = RecordStore(root, use_git=True)
+    assert store.use_git is True  # inside a repo -> git trail ON (the default)
+    rec = store.create("t0001", "brief", "1_input_assembly", TaskOrigin.SEED)
+    store.update(rec, "completed after gate")
+    out = subprocess.run(["git", "log", "--oneline"], cwd=root,
+                         capture_output=True, text=True, check=True)
+    assert out.stdout.strip(), "no commits recorded"
+    show = subprocess.run(["git", "show", "--stat", "HEAD"], cwd=root,
+                          capture_output=True, text=True, check=True)
+    assert "records/" in show.stdout  # the trail file itself is committed
+    # outside a repo the store degrades, it does not die (self.use_git False)
+    bare = RecordStore(tmp_path / "norepo", use_git=True)
+    assert bare.use_git is False
