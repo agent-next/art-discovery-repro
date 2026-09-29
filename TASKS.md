@@ -12,6 +12,7 @@ real blocker is hit; every blocker has a WHY/HOW/WHAT entry in REPRODUCTION.md Â
 - [x] Five-round independent review; v0.1.0 tagged; repo renamed `art-discovery-repro`
 - [x] Threaded dispatch (`dispatch_concurrency`, capped at 58) with locked shared state
 - [x] Family definition: longest-contig cluster representatives; seed BLASTP now searches a GenBank BLAST db (the paper's pool never contained the BLASTP hits)
+- [x] Runnable demo (`make demo`, `make demo-model`): full workflow at toy scale, rule policy or local small model, explained walkthrough
 - [x] Stage gates evaluate after each stage's work; follow-up dedupe; eval removed from pipeline wrappers
 
 ## Open

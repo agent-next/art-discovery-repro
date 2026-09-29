@@ -1,0 +1,67 @@
+ART harness demo | agents: rule policy (no model) | world: 9 synthetic contigs, planted answer kept out of the tools
+Five gated stages; each task = worker -> supervisor (-> revise) -> curator.
+
+  task t0001 [1_input_assembly] (seed): Stage 1 - input assembly. Inventory the input contigs: how many and how long.
+    worker     t0001   0.0s no model       tools: list_contigs -> contigs=9 total_nt=45440
+      why: worker = the agent that proposes a plan and executes it, then submits a written summary with its files (paper p.28).
+    supervisor t0001   0.0s no model       VERDICT: accept
+      why: supervisor = a second agent that reviews plan, summary and files and either accepts or returns them for revision; 49 of the paper's 119 tasks were revised at least once.
+    curator    t0001   0.0s no model       entered findings into the knowledge base
+      why: curator = after each accepted task it enters the findings into a shared knowledge base that later workers and supervisors read (paper p.28).
+  GATE 1_input_assembly: PASS
+      why: gate = a SCRIPTED completion check that closes a stage. No task of a later stage opens before it passes; the check is code, not a model's opinion (paper p.28).
+  task t0002 [2_database_sweep] (seed): Stage 2 - database sweep. Search all six reading frames of every contig for open reading frames 
+    worker     t0002   0.0s no model       tools: find_rt_orfs -> rt_orfs=9 contigs_with_rt=9
+    supervisor t0002   0.0s no model       VERDICT: accept
+    curator    t0002   0.0s no model       entered findings into the knowledge base
+  GATE 2_database_sweep: PASS
+  task t0003 [3_rt_classification] (seed): Stage 3 - RT classification. Give every RT candidate a class and set fragments (under 250 aa) as
+    worker     t0003   0.0s no model       tools: classify_rt -> classified=9 fragments=1 classes=A:2,B:4,C:2,fragment:1
+    supervisor t0003   0.0s no model       VERDICT: accept
+    curator    t0003   0.0s no model       entered findings into the knowledge base
+  GATE 3_rt_classification: PASS
+  task t0004 [4_neighborhood_census] (seed): Stage 4 - neighborhood census. Scan the window upstream of every full-length RT for a tandem rep
+    worker     t0004   0.0s no model       ran NO tool
+    supervisor t0004   0.0s no model       VERDICT: revise -- - no tool call succeeded in this task, so no claim in the summary has evidence; run the tools named in the bri
+      why: revision = the supervisor's 'no'. The worker must pass the completion check again; after 10 revisions a task stalls in the paper (3 here).
+    worker     t0004  10.6s no model       tools: scan_arrays -> assessed=8 arrays=4 no_array=3 not_assessed=1; proposes 4 follow-up(s)
+  TRIAGE from t0004: released  [Deep dive locus L01 (array, R=7) using deep_dive locus=L01]
+      why: triage = follow-up tasks proposed by agents queue here; the harness releases each or rejects it with a written reason (10 rejections in the paper).
+  TRIAGE from t0004: released  [Deep dive locus L02 (array, R=5) using deep_dive locus=L02]
+  TRIAGE from t0004: released  [Deep dive locus L03 (array, R=9) using deep_dive locus=L03]
+  TRIAGE from t0004: released  [Deep dive locus L09 (array, R=4) using deep_dive locus=L09]
+    supervisor t0004   0.0s no model       VERDICT: accept
+  TRIAGE from t0004: REJECTED - arrays.tsv calls L06 'not_assessed'; a deep dive needs an array call  [Deep dive locus L06: the scan could not assess it, so look f]
+    curator    t0004   0.0s no model       entered findings into the knowledge base
+  task t0005 [4_neighborhood_census] (follow_up of t0004): Deep dive locus L01 (array, R=7) using deep_dive locus=L01
+    worker     t0005   2.2s no model       tools: deep_dive -> deep_dives=1 delimited=1 loci=L01
+    supervisor t0005   0.0s no model       VERDICT: accept
+    curator    t0005   0.0s no model       entered findings into the knowledge base
+  task t0006 [4_neighborhood_census] (follow_up of t0004): Deep dive locus L02 (array, R=5) using deep_dive locus=L02
+    worker     t0006  23.4s no model       tools: deep_dive -> deep_dives=1 delimited=1 loci=L02
+    supervisor t0006   0.0s no model       VERDICT: accept
+    curator    t0006   0.0s no model       entered findings into the knowledge base
+  task t0007 [4_neighborhood_census] (follow_up of t0004): Deep dive locus L03 (array, R=9) using deep_dive locus=L03
+    worker     t0007   3.2s no model       tools: deep_dive -> deep_dives=1 delimited=1 loci=L03
+    supervisor t0007   0.0s no model       VERDICT: accept
+    curator    t0007   0.0s no model       entered findings into the knowledge base
+  task t0008 [4_neighborhood_census] (follow_up of t0004): Deep dive locus L09 (array, R=4) using deep_dive locus=L09
+    worker     t0008  26.8s no model       tools: deep_dive -> deep_dives=1 delimited=1 loci=L09
+    supervisor t0008   0.0s no model       VERDICT: accept
+    curator    t0008   0.0s no model       entered findings into the knowledge base
+  GATE 4_neighborhood_census: PASS
+  task t0009 [5_deep_dives] (seed): Stage 5 - deep dives. Make sure every array-positive locus has a deep dive; run one for any that
+    worker     t0009   0.0s no model       tools: deep_dive -> deep_dives=0 delimited=0 loci=-
+    supervisor t0009   0.0s no model       VERDICT: accept
+    curator    t0009   0.0s no model       entered findings into the knowledge base
+  GATE 5_deep_dives: PASS
+
+Report: draft from the shared tables, then the editor decides.
+    editor     t0009   0.0s no model       FILE: yes
+      why: editor = reviews a report before it is filed; the paper used 52 editor sessions for 19 reports.
+  report FILED at campaign/records/t0009/report.md
+
+tasks_total=9 completed=9 rejected_at_triage=1 stalled=0
+revised>=1: 1  follow_ups_opened: 4  reports_filed: 1
+Scorecard vs hidden truth: 4/4 planted arrays found, 0 false calls, decoys handled 5/5
+Walkthrough: /tmp/dm/final-rules/WALKTHROUGH.md
