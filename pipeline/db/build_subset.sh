@@ -16,6 +16,9 @@
 # Defaults (env or positional):
 #   GENOME_FNA  input genomes/contigs   (default data/db/genomes.fna)
 #   OUTDIR      output dir              (default results/db)
+#   ANNOTATED_FAA (env) source gene calls for annotated input assemblies —
+#               retained verbatim per paper p.28 (prodigal-gv is for
+#               unannotated assemblies only)
 # NOT-IN-PAPER: paths and seqkit/tantan plumbing are ours.
 set -euo pipefail
 
@@ -132,8 +135,18 @@ if [[ "$DRY_RUN" -eq 0 ]]; then
     mkdir -p "$OUT"
 fi
 
-# paper: prodigal-gv 2.10.0, default parameters
-run prodigal-gv -i "$GENOME_FNA" -a "$OUT/proteins_raw.faa"
+# paper p.28 (verbatim): "Genes were predicted with prodigal-gv 2.10.0 (71,
+# 77) under default parameters in unannotated assemblies of Logan, ENA, and
+# NCBI, and the source gene calls were retained for annotated assemblies of
+# NCBI and JGI." ANNOTATED_FAA (env) = existing source gene calls for the
+# input assemblies: retain them verbatim; only unannotated input gets
+# prodigal-gv 2.10.0 default parameters.
+if [[ -n "${ANNOTATED_FAA:-}" ]]; then
+    run_sh 'cp "$1" "$2"  # retain source gene calls (annotated assemblies)' \
+        "$ANNOTATED_FAA" "$OUT/proteins_raw.faa"
+else
+    run prodigal-gv -i "$GENOME_FNA" -a "$OUT/proteins_raw.faa"
+fi
 
 # paper: >=50% low-complexity via tantan (tantan masks low-complexity as
 # lowercase; -x X alternative noted)
