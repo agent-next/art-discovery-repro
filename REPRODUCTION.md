@@ -24,7 +24,7 @@ transcriptases with tandem repeat arrays". Facts ledger: `docs/paper-notes.md`.
 | 15 | Neighborhood sampling: 7,308 anchors → 10,983 loci | Methods p.29-30 | `pipeline/census/05` | done + tests (`test_pipeline_logic`) |
 | 16 | Partner scoring: 3 filters, controls, 3,564 → 16 | Methods p.30 | `pipeline/census/06` | done + tests (`test_pipeline_logic`) |
 | 17 | ART family definition: QQM14740.1 → 95 members | Methods p.31-32 | `pipeline/art_family/family_definition.sh` | done as a flag-exact wrapper (dry-run + flag tests); cluster representative = member on the longest contig (`longest_contig_reps.py`, unit-tested); never run on real data |
-| 18 | k-mer array scan (20×14-mer seeds, shuffles, R≥3) | Methods p.32 | `artharness.arrays.kmer_scan` | done + tests |
+| 18 | k-mer array scan (20×14-mer seeds, shuffles, R≥3) | Methods p.32 | `artharness.arrays.kmer_scan` + `exact_word_scan`/`scan_with_exact_word_fallback` (second setting: exact 12-nt word ×3; R=3 retention) | done + tests |
 | 19 | Array delimitation (10-mer, 30% tol, 200/2000 shuffles, PWM; one-lapse consensus budget; coding-repeat exclusion + >=300nt RT-adjacency rules) | Methods p.32 | `artharness.arrays.delimit_array` + `pwm_extend` + `cross_scan` | done + tests (annotation rules flag-based; scan callers do not yet pass gene_spans — see GAP-9) |
 | 20 | Phylogeny: 774 set, MAFFT L-INS-i, IQ-TREE Q.pfam+F+R6 | Methods p.33 | `pipeline/art_family/phylogeny.sh` | done as a flag-exact wrapper (dry-run + flag tests); never run on real data |
 | 21 | RNA-seq reanalysis: PRJNA836150, Bowtie2, 8% at 15 min | Methods p.36-37 | `pipeline/rnaseq/sa1_infection.sh` | done as a flag-exact wrapper (dry-run, flag and injection tests); never run on real data |

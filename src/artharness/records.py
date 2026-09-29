@@ -42,6 +42,17 @@ class TaskStatus(StrEnum):
     STALLED = "stalled"  # exceeded revision/gate limits
 
 
+class TaskKind(StrEnum):
+    """Task mix axis (paper 'Campaign accounting' p.30: 119 tasks = 1
+    assembly + 96 analyses + 22 report-writing). NOT-IN-PAPER: how the paper
+    assigned kinds; inferred here from the stage (1_input_assembly ->
+    assembly) and from report-writing tasks (kind set explicitly when one is
+    created); everything else is analysis."""
+    ASSEMBLY = "assembly"  # 1 in the paper
+    ANALYSIS = "analysis"  # 96 in the paper
+    REPORT_WRITING = "report_writing"  # 22 in the paper
+
+
 class TaskOrigin(StrEnum):
     SEED = "seed"  # seeded from a stage of the research brief (5 in the paper)
     DEEP_DIVE = "deep_dive"  # seeded from a promoted candidate family (16 in the paper)
@@ -61,6 +72,18 @@ class TaskRecord:
     gate_failures: int = 0
     label: str = ""  # short human-readable topic
     extra: dict = field(default_factory=dict)
+
+    @property
+    def kind(self) -> TaskKind:
+        """Task-mix axis (paper p.30: 1 assembly + 96 analyses + 22 report
+        writing). Stored in extra["kind"] when set explicitly (report
+        writing); otherwise inferred from the stage (NOT-IN-PAPER: the
+        inference rule — stage 1_input_assembly assembles, the rest
+        analyse unless explicitly report-writing)."""
+        if "kind" in self.extra:
+            return TaskKind(self.extra["kind"])
+        return (TaskKind.ASSEMBLY if self.stage == "1_input_assembly"
+                else TaskKind.ANALYSIS)
 
     def to_meta(self) -> dict:
         d = asdict(self)
@@ -115,6 +138,15 @@ class RecordStore:
     def get(self, task_id: str) -> TaskRecord:
         meta = self.records / task_id / "meta.json"
         return TaskRecord.from_meta(json.loads(meta.read_text()))
+
+    def task_mix(self) -> dict[str, int]:
+        """Counts by TaskKind — the paper's task-mix accounting line (p.30:
+        'One task assembled the input data, 96 performed analyses, and 22
+        wrote or revised a report')."""
+        mix: dict[str, int] = {}
+        for rec in self.list_tasks():
+            mix[rec.kind.value] = mix.get(rec.kind.value, 0) + 1
+        return mix
 
     def list_tasks(self) -> list[TaskRecord]:
         return [self.get(p.name) for p in sorted(self.records.iterdir()) if p.is_dir()]

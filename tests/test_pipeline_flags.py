@@ -171,3 +171,21 @@ def test_shell_script_dry_run(script: Path):
     assert proc.returncode == 0, f"{script.name} --dry-run failed: {proc.stderr}"
     assert proc.stdout.strip(), f"{script.name} --dry-run printed nothing"
     assert DRY_RUN_TOOL[script.name] in proc.stdout
+
+
+def test_build_subset_annotated_input_retains_source_gene_calls(tmp_path):
+    # Paper p.28: prodigal-gv only "in unannotated assemblies"; "the source
+    # gene calls were retained for annotated assemblies". ANNOTATED_FAA must
+    # bypass prodigal-gv in the dry-run plan; without it prodigal-gv runs.
+    import os
+    proc = subprocess.run(
+        ["bash", str(DB / "build_subset.sh"), "--dry-run"],
+        capture_output=True, text=True, check=True)
+    assert "prodigal-gv" in proc.stdout
+    env = dict(os.environ, ANNOTATED_FAA="inputs/annotated.faa")
+    proc2 = subprocess.run(
+        ["bash", str(DB / "build_subset.sh"), "--dry-run"],
+        capture_output=True, text=True, check=True, env=env)
+    assert "prodigal-gv" not in proc2.stdout
+    assert "retain source gene calls" in proc2.stdout
+    assert "inputs/annotated.faa" in proc2.stdout

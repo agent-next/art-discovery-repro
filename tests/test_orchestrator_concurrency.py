@@ -111,7 +111,10 @@ def test_shared_state_stays_consistent_under_concurrency(tmp_path: Path):
     assert all(t.status is TaskStatus.CURATED for t in tasks)
     assert [t.origin for t in tasks].count(TaskOrigin.FOLLOW_UP) == n
     sessions = orch.ledger.sessions()
-    assert len(sessions) == 2 * n * 3  # worker + supervisor + curator per task
+    # worker + supervisor + curator per task, PLUS the one launch session
+    # the chain records (paper p.30 accounting; batch2 2026-09-29)
+    assert len(sessions) == 2 * n * 3 + 1
+    assert sum(1 for s in sessions if s.role == "launch") == 1
     r = orch.report
     assert (r.completed, r.tasks_total, r.follow_ups, r.stalled) == (2 * n, 2 * n, n, 0)
 

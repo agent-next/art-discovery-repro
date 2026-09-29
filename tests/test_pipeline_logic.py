@@ -463,3 +463,27 @@ def test_promotes_fails_early_returns_p1():
     occs = [_gene(locus_id=f"l{i}", cluster_id_90="c1") for i in range(3)]
     promoted, p = f06.promotes(occs, {"cladeA": 100}, [])
     assert promoted is False and p == 1.0
+
+
+def test_novel_eighth_class_vs_scattered_unplaced():
+    # Paper p.29 (verbatim): "A further 25,737 clusters formed a loosely
+    # organized group on the tree apart from any labeled member and were
+    # treated as an eighth class of 'novel' RTs. The 137,385 scattered
+    # clusters that could not be placed formed the ninth class of 'unplaced'
+    # RTs." classify_target never returned 'novel' (raw-fidelity audit).
+    # INTERPRETED criterion: a majority of unlabeled neighbors in the k
+    # nearest leaves = grouped apart from labeled members -> novel; labeled
+    # but disagreeing neighbors -> scattered -> unplaced.
+    t1, t2 = [], None  # no tier-1/2 signal
+    # neighborhood dominated by other unplaced clusters -> novel
+    out = f04.classify_target("x", t1, t2, ["unplaced"] * 3 + ["retron", "retron"])
+    assert out == ("tier3", "novel"), out
+    # labeled neighbors that disagree -> scattered unplaced
+    out = f04.classify_target("y", t1, t2, ["retron", "DGR", "retron", "UG", "Abi"])
+    assert out == ("unplaced", "unplaced"), out
+    # five agreeing labeled neighbors still place (unchanged behavior)
+    out = f04.classify_target("z", t1, t2, ["retron"] * 5)
+    assert out == ("tier3", "retron"), out
+    # no neighbor data at all stays unplaced (no evidence of a group)
+    out = f04.classify_target("w", t1, t2, None)
+    assert out == ("unplaced", "unplaced"), out

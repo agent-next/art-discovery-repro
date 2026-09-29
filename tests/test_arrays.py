@@ -222,3 +222,96 @@ def test_rt_adjacency_gene_containing_last_copy_does_not_block():
     spanning_gene = [(last_copy_end - 400, last_copy_end + 50)]  # 450 nt, contains copy
     arr = _fast_delimit("L_x", up, gene_spans=spanning_gene, rt_offset=rt)
     assert arr is not None and arr.rt_adjacent is True  # not BETWEEN
+
+
+# ---------------------------------------------------------------------------
+# Paper p.32 second scan setting: "an array was called either from annotated
+# repeat copies ... or from an exact 12-nt word that recurred three times at
+# such spacing" + the R=3 retention ("One locus with R = 3 that did not
+# exceed its shuffles was retained because an exact 12-nt word recurred
+# three times"). exact_word_scan existed dead; wire + test it (batch2).
+# ---------------------------------------------------------------------------
+
+def test_exact_word_scan_calls_array_on_three_exact_copies():
+    word = "ACGTACGTACGT"
+    up = (word + "A" * 88) * 3  # 100-nt start-to-start spacing
+    call = arrays.exact_word_scan("L_w", up)
+    assert call.status == "array" and call.R == 3
+    assert call.seed == word
+
+
+def test_exact_word_scan_rejects_two_copies_and_wrong_spacing():
+    word = "ACGTACGTACGT"
+    two = (word + "A" * 88) * 2 + "TTTTTTTTTTTT"
+    assert arrays.exact_word_scan("L_w2", two).status == "no_array"
+    # spacing far outside the regular-run bounds -> no array
+    wide = word + "A" * 900 + word + "A" * 900 + word
+    assert arrays.exact_word_scan("L_w3", wide).status == "no_array"
+
+
+def test_scan_with_exact_word_fallback_retains_shuffle_failures():
+    # the R=3 rule: a locus whose chain does not beat its shuffles is still
+    # retained when an exact 12-nt word recurs three times at such spacing
+    word = "ACGTACGTACGT"
+    up = (word + "A" * 88) * 3
+    call = arrays.scan_with_exact_word_fallback("L_f2", up, random.Random(0))
+    assert call.status == "array" and call.R == 3
+    # short upstream + nothing found stays not_assessed (paper: "loci with
+    # less than 1,500 nt of contig upstream of the RT and no array were
+    # recorded as not assessed")
+    short = arrays.scan_with_exact_word_fallback(
+        "L_s", "ACGT" * 10, random.Random(0))
+    assert short.status == "not_assessed"
+
+
+def test_aligned_repeat_length_via_mafft_stub(tmp_path):
+    # Paper p.32: "The repeat length was measured both on ungapped copies and
+    # on a MAFFT alignment of the copies." The MAFFT leg shells out; this
+    # test exercises the plumbing with a stub binary emitting a recorded
+    # alignment (repo convention: live tools tested via recorded fixtures,
+    # never executed offline). Terminal all-gap columns are trimmed; internal
+    # gap columns count (the aligned block can be longer than the ungapped
+    # consensus). Returns None when no mafft is available.
+    stub = tmp_path / "mafft"
+    stub.write_text("#!/bin/sh\n"
+                    "echo '>c1'\necho 'ACGTACGTT-A'\n"
+                    "echo '>c2'\necho 'ACGTACGTTA-'\n"
+                    "echo '>c3'\necho 'ACGTAC-TT-A'\n")
+    stub.chmod(0o755)
+    copies = ["ACGTACGTTA", "ACGTACGTTA", "ACGTACTTA"]
+    n = arrays.aligned_repeat_length(copies, mafft_exe=stub)
+    assert n == 11  # full stub alignment width (internal gaps count)
+    # all-gap terminal columns are trimmed
+    stub2 = tmp_path / "mafft2"
+    stub2.write_text("#!/bin/sh\n"
+                     "echo '>c1'\necho '--ACGT--'\n"
+                     "echo '>c2'\necho '--ACGT--'\n")
+    stub2.chmod(0.755 * 1000 if False else 0o755)
+    assert arrays.aligned_repeat_length(["ACGT", "ACGT"], mafft_exe=stub2) == 4
+    # no mafft anywhere -> None (caller keeps the ungapped measurement only)
+    assert arrays.aligned_repeat_length(copies, mafft_exe=tmp_path / "nope") is None
+
+
+def test_ungapped_and_aligned_measurements_pair():
+    stub_len = arrays.aligned_repeat_length(["ACGTACGTTA"] * 3,
+                                            mafft_exe=None)  # explicit None
+    assert stub_len is None  # None exe == unavailable, not an error
+
+
+def test_exact_word_retention_fires_only_when_kmer_scan_declines():
+    # devin round-3: the earlier fixture's spacers let kmer_scan itself call
+    # an array (14-mers spanning word+spacer recurred), so the fallback never
+    # fired — vacuous. Random 4-base spacers per copy + a precondition
+    # assertion make the fallback the deciding rule.
+    word = "ACGTACGTACGT"  # 12 nt: below the 14-mer scan, at exact-word length
+    rng = random.Random(7)
+    ends = [("AA", "AC"), ("CG", "GT"), ("TT", "TA")]  # distinct 14-mer flanks
+    parts = []
+    for pre2, post2 in ends:
+        parts.append(word)
+        parts.append(pre2 + "".join(rng.choice("ACGT") for _ in range(84)) + post2)
+    up = "".join(parts)
+    pre = arrays.kmer_scan("L_pre", up, random.Random(0))
+    assert pre.status != "array"  # precondition: the DEFAULT setting declines
+    call = arrays.scan_with_exact_word_fallback("L_r3", up, random.Random(0))
+    assert call.status == "array" and call.R == 3  # retention rule fires

@@ -20,13 +20,14 @@ acceptance criteria.
 from __future__ import annotations
 
 import threading
+import time
 from collections import deque
 from collections.abc import Callable
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from dataclasses import dataclass
 from pathlib import Path
 
-from .accounting import SessionLedger
+from .accounting import SessionLedger, SessionResult
 from .config import CampaignConfig
 from .knowledge import KnowledgeBase
 from .records import RecordStore, TaskOrigin, TaskRecord, TaskStatus
@@ -95,6 +96,24 @@ class Orchestrator:
         scripted gate passes; the last stage's gate closes the chain."""
         # brief provenance is part of the versioned record (S1 finding D: the
         # mandate existed only as prose in the brief; nothing enforced it)
+        # The launch session (paper p.30: 949 sessions = the launch session
+        # plus 414 worker / 375 supervisor / 107 curator / 52 editor) is part
+        # of the campaign accounting; record it around the whole chain.
+        # NOT-IN-PAPER: token split for the launch session is not observable
+        # at this layer — zeros, never fabricated.
+        launched_at = time.monotonic()
+        try:
+            self._run_stage_chain_inner(briefs, deep_dive_labels)
+        finally:
+            with self._lock:
+                self.ledger.record(SessionResult(
+                    role="launch", task_id=None,
+                    duration_s=time.monotonic() - launched_at,
+                    input_tokens_uncached=0, output_tokens=0,
+                    cache_write_tokens=0))
+
+    def _run_stage_chain_inner(self, briefs: dict[str, list[str]],
+                               deep_dive_labels: dict[str, list[str]] | None) -> None:
         (self.store.root / "campaign.md").write_text(
             f"# campaign record\n\n{self.cfg.brief_provenance}\n\n"
             "This campaign runs a RECONSTRUCTED research brief; it is not the "

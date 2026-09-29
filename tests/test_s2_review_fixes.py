@@ -289,6 +289,42 @@ def test_soundness_auto_lose_is_load_bearing():
     assert wb > wa  # 4.25 vs 4.15: the rule, not the score, decides
 
 
+def test_exact_ties_and_double_auto_lose_are_discarded_games():
+    # Audit 2026-09-28 finding 9: an exact weighted tie (and a double
+    # soundness auto-lose) recorded NO winner, but bradley_terry hard-coded
+    # n_ij=2 — the fit assumed a decisive game that never happened. Ties must
+    # be discarded games with per-pair n_ij accounting (INTERPRETED: the
+    # paper states only "the report with the higher weighted score won").
+    from artharness.config import CampaignConfig
+    from artharness.tournament import JudgeScores, run_tournament
+
+    scores = JudgeScores(4, 4, 4, 4)  # every game an exact tie
+    reports = {"a": "A", "b": "B", "c": "C"}
+    judge = lambda *args: scores  # noqa: E731
+
+    out = run_tournament(reports, judge, cfg=CampaignConfig(),
+                         rng=random.Random(0))
+    assert out["games"] == 6  # every ordered pair was judged
+    assert out["discarded_games"] == 6  # none produced a winner
+    assert sum(out["wins"].values()) == 0
+    # zero decisive games -> all strengths equal at the prior
+    assert len(set(out["strengths"].values())) == 1
+
+    # mixed: a beats b decisively in BOTH directions, c ties with everyone
+    def judge_mixed(name_a, text_a, name_b, text_b):
+        if {text_a, text_b} == {"A", "B"}:
+            return (JudgeScores(5, 5, 5, 5) if text_a == "A"
+                    else JudgeScores(1, 1, 5, 1))
+        return scores  # ties involving C
+
+    out2 = run_tournament({"a": "A", "b": "B", "c": "C"}, judge_mixed,
+                          cfg=CampaignConfig(), rng=random.Random(0))
+    assert out2["wins"]["a"] == 2 and out2["wins"]["b"] == 0
+    assert out2["wins"]["c"] == 0
+    assert out2["discarded_games"] == 4  # a-c and b-c, both directions
+    assert out2["ranking"][0] == "a"
+
+
 # ---------------------------------------------------------------------------
 # D-9: paper constants are pinned (REPRODUCTION.md fidelity claims)
 # ---------------------------------------------------------------------------

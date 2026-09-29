@@ -667,8 +667,9 @@ def cross_scan(arrays: list[DelimitedArray], upstreams: dict[str, str],
 def exact_word_scan(locus: str, upstream: str, word_len: int = 12) -> ScanCall:
     """Paper's second scan setting (Methods p.32): an exact word (default 12 nt)
     recurring three times at regular spacing (100-450 nt, start to start) calls an
-    array — no shuffle control, no mismatch allowance. Used for the one R=3 locus
-    that did not beat its shuffles and for phylogeny tips."""
+    array — no shuffle control, no mismatch allowance. Applies to phylogeny-tip
+    loci and as the R=3 retention rule; callers reach it via
+    scan_with_exact_word_fallback."""
     window = upstream[-MAX_UPSTREAM_SCAN:].upper()
     counts: dict[str, list[int]] = {}
     for i in range(len(window) - word_len + 1):
@@ -684,3 +685,65 @@ def exact_word_scan(locus: str, upstream: str, word_len: int = 12) -> ScanCall:
                             copies=run,
                             note="exact-word rule, no shuffle control")
     return best or ScanCall(locus=locus, status="no_array")
+
+
+def aligned_repeat_length(copies_seqs: list[str],
+                          mafft_exe: str | None = None) -> int | None:
+    """Second repeat-length measurement of paper Methods p.32: "The repeat
+    length was measured both on ungapped copies and on a MAFFT alignment of
+    the copies." Shells out to mafft --auto (an explicit mafft_exe, else
+    $ARTHARNESS_MAFFT, else PATH); returns the alignment width after
+    trimming all-gap TERMINAL columns, or None when no mafft is available
+    (the caller keeps the ungapped measurement alone). NOT-IN-PAPER: the
+    trimming convention; live mafft is exercised via recorded-fixture tests
+    per repo convention, never in the offline suite.
+    """
+    import os
+    import shutil
+    import subprocess
+
+    exe = mafft_exe or os.environ.get("ARTHARNESS_MAFFT") or shutil.which("mafft")
+    if not exe:
+        return None
+    fasta = "".join(f">c{i}\n{s}\n" for i, s in enumerate(copies_seqs))
+    try:
+        proc = subprocess.run([str(exe), "--auto", "-"], input=fasta,
+                              capture_output=True, text=True, timeout=120)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    seqs = ["".join(line.strip() for line in block.splitlines()[1:])
+            for block in proc.stdout.split(">")[1:]]  # strip headers
+    if not seqs:
+        return None
+    width = max(len(s) for s in seqs)
+    seqs = [s.ljust(width, "-") for s in seqs]
+    cols = range(width)
+    keep = [i for i in cols
+            if any(s[i] != "-" for s in seqs)]  # any-copy base keeps a column
+    if not keep:
+        return 0
+    # trim only TERMINAL all-gap columns; internal gaps count toward the
+    # aligned length (the aligned block can exceed the ungapped consensus)
+    return keep[-1] - keep[0] + 1
+
+
+def scan_with_exact_word_fallback(locus: str, upstream: str,
+                                  rng: random.Random) -> ScanCall:
+    """Default scan setting with the paper's exact-word retention (Methods
+    p.32): "One locus with R = 3 that did not exceed its shuffles was
+    retained because an exact 12-nt word recurred three times at such
+    spacing." kmer_scan first; a locus it scores no_array is re-tested by
+    exact_word_scan. The <1,500-nt not_assessed rule applies to the combined
+    outcome ("loci with less than 1,500 nt of contig upstream of the RT and
+    no array were recorded as not assessed")."""
+    call = kmer_scan(locus, upstream, rng)
+    if call.status == "array":
+        return call
+    fallback = exact_word_scan(locus, upstream)
+    if fallback.status == "array":
+        return fallback
+    if len(upstream) < MIN_UPSTREAM_FOR_ASSESSMENT:
+        return ScanCall(locus=locus, status="not_assessed")
+    return fallback
