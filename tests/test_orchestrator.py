@@ -212,3 +212,19 @@ def test_revision_passes_do_not_duplicate_followups(tmp_path: Path):
     assert store.get("t0001").revisions == 1  # two worker passes happened
     assert [t.origin for t in tasks].count(TaskOrigin.FOLLOW_UP) == 1
     assert orch.report.follow_ups == 1
+
+
+def test_launch_session_recorded_and_task_mix(tmp_path: Path):
+    # Paper p.30: sessions = the LAUNCH session plus the role sessions
+    # (949 = 1 + 414 + 375 + 107 + 52); task mix = 1 assembly + 96 analyses
+    # + 22 report writing. The orchestrator used to record neither the
+    # launch session nor any task-mix axis. FAILING-FIRST.
+    orch, store, ledger, _ = make_orch(tmp_path)
+    orch.run_stage_chain({STAGES[0]: ["assemble"], STAGES[1]: ["sweep"],
+                          STAGES[2]: ["classify"]})
+    roles = ledger.summary()["sessions_by_role"]
+    assert roles["launch"] == 1  # exactly one launch session per campaign
+    mix = store.task_mix()
+    assert mix == {"assembly": 1, "analysis": 2}
+    rec = store.list_tasks()[0]
+    assert rec.kind.value == "assembly"
