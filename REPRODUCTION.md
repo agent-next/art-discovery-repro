@@ -33,6 +33,7 @@ transcriptases with tandem repeat arrays". Facts ledger: `docs/paper-notes.md`.
 | 24 | Replicate campaigns (10×) + transcript forensics | Methods p.38 | rerun via orchestrator + `experiments/forensics.py` (identifier search, ≥200-nt DNA + repeat-remark parsing) | forensics done; reruns budget-gated (GAP-7) |
 | 25 | Interpretability (Evo2/gLM2 profiles; Mythos 5 sparse signals) | Methods p.38-39 | out of repo scope — needs model internals (GAP-3) | not reproducible |
 | 26 | Serendipity chain t0010 → t0062 | Results p.3-5 | emerges from harness if workers/supervisors behave similarly | not guaranteed (paper: 0/10 reruns) |
+| 27 | Runnable end-to-end workflow with a small model (not a paper element; shows how the harness works) | Methods p.28 | `artharness.demo` (`make demo`, `docs/DEMO.md`) | done; rule policy and a local 0.6B model both complete the chain; toy world, not the paper's data |
 
 ## 2. Verification ladder (what "reproduced" means here)
 
