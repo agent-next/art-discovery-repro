@@ -171,7 +171,10 @@ class ProteinDB:
         """Locus neighborhoods: proteins within ``flank_bp`` of any protein
         annotated with Pfam id ``class_`` (anchors included).
 
-        NOT-IN-PAPER: the paper does not specify the neighborhood window size.
+        flank default per paper Methods 'Sampling of RT neighborhoods' p.29-30:
+        "10 kb of flanking sequence on each side". NOT-IN-PAPER: only the
+        semantics — interval overlap and anchoring on Pfam-annotated proteins
+        rather than RT-cluster loci.
         """
         return self._rows(
             "SELECT DISTINCT p.* FROM proteins p"
