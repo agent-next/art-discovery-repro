@@ -19,7 +19,6 @@ acceptance criteria.
 
 from __future__ import annotations
 
-import threading
 from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -79,11 +78,9 @@ class Orchestrator:
         self.gates = gates
         self.triage = triage or (lambda brief, parent: (True, ""))
         self.queue: deque[str] = deque()
-        # UNIMPLEMENTED (paper ran <=58 concurrent sessions): the dispatch loop
-        # is strictly sequential, so this semaphore never contends. Kept as the
-        # seam for a future threaded dispatch; do not cite max_concurrent as a
-        # reproduced behavior.
-        self._sem = threading.Semaphore(cfg.max_concurrent_sessions)
+        # UNIMPLEMENTED (paper ran <=58 concurrent sessions): dispatch is strictly
+        # sequential; cfg.max_concurrent_sessions is recorded, not enforced.
+        self._proposed: set[tuple[str, str]] = set()
         self.report = CampaignReport()
 
     # -- stage chain ---------------------------------------------------------
@@ -135,11 +132,17 @@ class Orchestrator:
         # Budget rejections are still "rejected with a written reason"; the reason is
         # recorded in the campaign log (no task dir exists to hold it).
         self.report.rejected_at_triage += 1
-        (self.store.root / "triage-rejections.log").open("a").write(
-            f"REJECTED: {reason}\nbrief: {brief[:400]}\n\n")
+        with (self.store.root / "triage-rejections.log").open("a") as log:
+            log.write(f"REJECTED: {reason}\nbrief: {brief[:400]}\n\n")
 
     def propose_followup(self, brief: str, parent: TaskRecord,
                          proposed_by: str = "worker") -> None:
+        # A revised task re-presents the same follow-ups on every pass; triage each
+        # distinct (parent, brief) once so revisions cannot multiply tasks.
+        key = (parent.task_id, brief)
+        if key in self._proposed:
+            return
+        self._proposed.add(key)
         ok, reason = self.triage(brief, parent)
         if ok:
             self._new_task(parent.stage, brief, TaskOrigin.FOLLOW_UP, parent=parent.task_id,
@@ -165,8 +168,7 @@ class Orchestrator:
     def _drain(self) -> None:
         while self.queue:
             rec = self.store.get(self.queue.popleft())
-            with self._sem:
-                self._dispatch(rec)
+            self._dispatch(rec)
 
     def _dispatch(self, rec: TaskRecord) -> None:
         # One loop per WORKER pass. Every pass — initial or revision — must pass
