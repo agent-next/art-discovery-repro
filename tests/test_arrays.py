@@ -222,3 +222,43 @@ def test_rt_adjacency_gene_containing_last_copy_does_not_block():
     spanning_gene = [(last_copy_end - 400, last_copy_end + 50)]  # 450 nt, contains copy
     arr = _fast_delimit("L_x", up, gene_spans=spanning_gene, rt_offset=rt)
     assert arr is not None and arr.rt_adjacent is True  # not BETWEEN
+
+
+# ---------------------------------------------------------------------------
+# Paper p.32 second scan setting: "an array was called either from annotated
+# repeat copies ... or from an exact 12-nt word that recurred three times at
+# such spacing" + the R=3 retention ("One locus with R = 3 that did not
+# exceed its shuffles was retained because an exact 12-nt word recurred
+# three times"). exact_word_scan existed dead; wire + test it (batch2).
+# ---------------------------------------------------------------------------
+
+def test_exact_word_scan_calls_array_on_three_exact_copies():
+    word = "ACGTACGTACGT"
+    up = (word + "A" * 88) * 3  # 100-nt start-to-start spacing
+    call = arrays.exact_word_scan("L_w", up)
+    assert call.status == "array" and call.R == 3
+    assert call.seed == word
+
+
+def test_exact_word_scan_rejects_two_copies_and_wrong_spacing():
+    word = "ACGTACGTACGT"
+    two = (word + "A" * 88) * 2 + "TTTTTTTTTTTT"
+    assert arrays.exact_word_scan("L_w2", two).status == "no_array"
+    # spacing far outside the regular-run bounds -> no array
+    wide = word + "A" * 900 + word + "A" * 900 + word
+    assert arrays.exact_word_scan("L_w3", wide).status == "no_array"
+
+
+def test_scan_with_exact_word_fallback_retains_shuffle_failures():
+    # the R=3 rule: a locus whose chain does not beat its shuffles is still
+    # retained when an exact 12-nt word recurs three times at such spacing
+    word = "ACGTACGTACGT"
+    up = (word + "A" * 88) * 3
+    call = arrays.scan_with_exact_word_fallback("L_f2", up, random.Random(0))
+    assert call.status == "array" and call.R == 3
+    # short upstream + nothing found stays not_assessed (paper: "loci with
+    # less than 1,500 nt of contig upstream of the RT and no array were
+    # recorded as not assessed")
+    short = arrays.scan_with_exact_word_fallback(
+        "L_s", "ACGT" * 10, random.Random(0))
+    assert short.status == "not_assessed"

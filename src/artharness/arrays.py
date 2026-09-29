@@ -667,8 +667,9 @@ def cross_scan(arrays: list[DelimitedArray], upstreams: dict[str, str],
 def exact_word_scan(locus: str, upstream: str, word_len: int = 12) -> ScanCall:
     """Paper's second scan setting (Methods p.32): an exact word (default 12 nt)
     recurring three times at regular spacing (100-450 nt, start to start) calls an
-    array — no shuffle control, no mismatch allowance. Used for the one R=3 locus
-    that did not beat its shuffles and for phylogeny tips."""
+    array — no shuffle control, no mismatch allowance. Applies to phylogeny-tip
+    loci and as the R=3 retention rule; callers reach it via
+    scan_with_exact_word_fallback."""
     window = upstream[-MAX_UPSTREAM_SCAN:].upper()
     counts: dict[str, list[int]] = {}
     for i in range(len(window) - word_len + 1):
@@ -684,3 +685,23 @@ def exact_word_scan(locus: str, upstream: str, word_len: int = 12) -> ScanCall:
                             copies=run,
                             note="exact-word rule, no shuffle control")
     return best or ScanCall(locus=locus, status="no_array")
+
+
+def scan_with_exact_word_fallback(locus: str, upstream: str,
+                                  rng: random.Random) -> ScanCall:
+    """Default scan setting with the paper's exact-word retention (Methods
+    p.32): "One locus with R = 3 that did not exceed its shuffles was
+    retained because an exact 12-nt word recurred three times at such
+    spacing." kmer_scan first; a locus it scores no_array is re-tested by
+    exact_word_scan. The <1,500-nt not_assessed rule applies to the combined
+    outcome ("loci with less than 1,500 nt of contig upstream of the RT and
+    no array were recorded as not assessed")."""
+    call = kmer_scan(locus, upstream, rng)
+    if call.status == "array":
+        return call
+    fallback = exact_word_scan(locus, upstream)
+    if fallback.status == "array":
+        return fallback
+    if len(upstream) < MIN_UPSTREAM_FOR_ASSESSMENT:
+        return ScanCall(locus=locus, status="not_assessed")
+    return fallback
