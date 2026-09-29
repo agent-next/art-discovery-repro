@@ -26,10 +26,10 @@ equivalent.
 ## Check
 
 `make check` — the gate `.github/workflows/ci.yml` runs: `ruff check src tests
-pipeline benchmark` + `python3 -m pytest` (offline; no network, GPU, or paid APIs).
-After `make setup`, either `source .venv/bin/activate` first or use the venv tools
-directly (`.venv/bin/ruff check src tests pipeline benchmark`,
-`.venv/bin/python -m pytest tests/test_<name>.py`).
+pipeline benchmark` + `shellcheck -S warning pipeline/*/*.sh` + `python -m pytest`
+with a coverage floor (offline; no network, GPU, or paid APIs). The Makefile uses
+`.venv/bin/` automatically when it exists, so no `source .venv/bin/activate` is needed.
+Single test file: `.venv/bin/python -m pytest tests/test_<name>.py`.
 
 ## Rules for agents working here
 
