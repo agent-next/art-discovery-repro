@@ -84,6 +84,28 @@ def test_parse_hmmsearch_domtbl_best_domain_per_target(tmp_path: Path):
     assert hits["t2"].rt_class == "DGR"
 
 
+def test_split_rt_core_is_covered_by_the_union_of_its_domains(tmp_path: Path):
+    # Real hmmsearch (HMMER 3.4, Pfam RVT_1 PF00078.33) lines for the paper's own
+    # reference RT LtrA (UniProt P0A3U0): the core is split in two domains
+    # (model 2-137 and 141-200). Best-domain coverage is 0.68 and would drop a
+    # reference RT the paper's thresholds were fixed on; the union is 0.99.
+    domtbl = tmp_path / "ltra.domtblout"
+    domtbl.write_text(
+        "sp|P0A3U0|LTRA_LACLC - 599 RVT_1 PF00078.33 200 3.9e-36 113.8 0.5 1 2 "
+        "1.9e-26 1.9e-26 82.2 0.0 2 137 90 234 89 240 0.85 LtrA\n"
+        "sp|P0A3U0|LTRA_LACLC - 599 RVT_1 PF00078.33 200 3.9e-36 113.8 0.5 2 2 "
+        "2.6e-10 2.6e-10 29.6 0.1 141 200 300 361 282 361 0.90 LtrA\n"
+    )
+    (hit,) = f02.parse_hmmsearch_domtbl(domtbl)
+    assert hit.coverage == pytest.approx((137 - 2 + 1 + 200 - 141 + 1) / 200)
+    assert hit.coverage > 0.75 and f02.passes_filters(hit, f02.Thresholds()) is True
+
+
+def test_union_length_merges_overlaps_and_ignores_contained_spans():
+    assert f02._union_length([(1, 100), (50, 150), (60, 70), (200, 210)]) == 161
+    assert f02._union_length([]) == 0
+
+
 def test_passes_filters_core_coverage_boundary():
     # paper: retain hits covering >=0.75 of the RT core profile
     assert f02.passes_filters(_hit(coverage=0.75)) is True
