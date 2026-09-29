@@ -40,8 +40,10 @@ transcriptases with tandem repeat arrays". Facts ledger: `docs/paper-notes.md`.
 2. **Dry-run fidelity**: pipeline wrappers print paper-exact commands (`--dry-run`).
 3. **Data-anchored**: array code recovers planted synthetic ART arrays; on real data,
    `scripts/scan_genome.py` on the downloaded MarsHill genome (MW248466.1, ENA) must
-   yield its 5-copy shuffle-controlled array call (seed ATATGAATACGTAT; recorded in
-   `task-runs/20260924-devin-build/real-genome-scan.txt`). [Corrected 2026-09-24 S1
+   yield its 5-copy shuffle-controlled array call (seed ATATGAATACGTAT). Reproduced
+   2026-09-29 on `main` @ 0f3f150 (`task-runs/20260929-real-genome-scan/`); the
+   genome-wide array totals changed since the 2026-09-24 receipt because of later
+   scan-code fixes, and the extra calls are unvalidated. [Corrected 2026-09-24 S1
    review: this line previously claimed a 14-copy call from a nonexistent script.]
 4. **Benchmark parity**: L1–L3 rerun with Fable 5; compare per-level recognition rates
    against the paper's ranges (L1 ≥90%, L3 model-dependent 32–96%).

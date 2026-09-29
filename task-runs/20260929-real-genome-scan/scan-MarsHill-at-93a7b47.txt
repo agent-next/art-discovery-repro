@@ -1,0 +1,10 @@
+
+== ENA|MW248466|MW248466.1 (266,637 nt): 36 array(s) pass shuffle control
+  pos 213,994-214,801  R=5 copies  span=0.81 kb  seed=ATATGAATACGTAT  shuffle_max=0
+  pos 90,954-92,020  R=5 copies  span=1.07 kb  seed=AGAAAATTAAAAAT  shuffle_max=0
+  pos 113,422-114,562  R=4 copies  span=1.14 kb  seed=ATATTATAATAATG  shuffle_max=3
+  pos 109,871-110,984  R=4 copies  span=1.11 kb  seed=AAGAATTAAATGAA  shuffle_max=0
+  pos 134,068-135,345  R=4 copies  span=1.28 kb  seed=AATGAAGATTATGA  shuffle_max=0
+  pos 219,162-219,799  R=3 copies  span=0.64 kb  seed=ATATTATAAAAATG  shuffle_max=0
+  pos 20,749-21,410  R=3 copies  span=0.66 kb  seed=AAGAAGAATTAAAT  shuffle_max=0
+  pos 241,638-242,399  R=3 copies  span=0.76 kb  seed=AATAAAATTGAAAT  shuffle_max=0
