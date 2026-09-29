@@ -291,7 +291,10 @@ def _consensus_block(copies_seqs: list[str]) -> tuple[int, int, str]:
     cons = []
     for i in range(width):
         col = [s[i] for s in copies_seqs]
-        base = max(set(col), key=col.count)
+        # sorted() fixes tie order: max() keeps the first maximal
+        # element, so modal-count ties resolve alphabetically, never by
+        # set iteration order (PYTHONHASHSEED-dependent; audit finding 2)
+        base = max(sorted(set(col)), key=col.count)
         cons.append((base, col.count(base) / len(col)))
     blocks: list[tuple[int, int]] = []
     start = None
@@ -387,7 +390,8 @@ def _chain_score(window: str, chain: list[int], seed_len: int) -> tuple[float, s
     columns = [seq[s:e] for seq in copies_seqs]
     ic = _information_content(columns, background)
     return (len(chain) - 1) * ic, "".join(
-        max(set(col), key=col.count) for col in zip(*columns, strict=False))
+        max(sorted(set(col)), key=col.count)
+        for col in zip(*columns, strict=False))
 
 
 def delimit_array(locus: str, upstream: str, rng: random.Random) -> DelimitedArray | None:
