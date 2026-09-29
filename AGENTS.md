@@ -1,5 +1,8 @@
 # AGENTS.md — art-harness
 
+GitHub repo: `agent-next/art-discovery-repro` (renamed from `art-harness`; the local
+checkout directory keeps the old name).
+
 Org rules: https://github.com/agent-next/.github/blob/main/AGENT-STANDARD.md (hard limits, PR/merge policy).
 
 ## What this repo is

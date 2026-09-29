@@ -1,48 +1,29 @@
 # TASKS.md — art-harness build queue
 
 Goal: max reproduction of Yoon et al. 2026 (ART harness). Push every layer until a
-real blocker is hit; every blocker gets a WHY/HOW/WHAT entry in REPRODUCTION.md §Gaps.
+real blocker is hit; every blocker has a WHY/HOW/WHAT entry in REPRODUCTION.md §5.
 
 ## Done
-- [x] Repo scaffold, packaging, CI (`main` @ 41e2f44, private; repo renamed agent-discovery -> art-discovery-repro, public 2026-09-24)
-- [x] Harness core: records/knowledge/roles/orchestrator/tournament/accounting/backends (23 tests)
-- [x] `arrays.py`: paper-exact k-mer scan + delimitation (Methods p.32), tested on synthetic ART arrays
-- [x] Paper verified locally: `/tmp/art-paper/art-paper.pdf` (40 pp; main + Methods + Supp Figs 1–7; NO Supp Notes in file)
+- [x] Repo scaffold, packaging, CI; `make check` gate (ruff + shellcheck + pytest with coverage floor)
+- [x] Harness core: records / knowledge / roles / orchestrator / tournament / accounting / backends
+- [x] `arrays.py`: k-mer scan, delimitation, PWM extension, cross-scan (Methods p.32)
+- [x] Pipeline wrappers (census 01–06, art_family, rnaseq, db subset), connectors, 12 skill guides, benchmark
+- [x] `docs/paper-notes.md`, `REPRODUCTION.md`, `brief/research_brief.md` (6-anchor reconstruction)
+- [x] Five-round independent review; v0.1.0 tagged; repo renamed `art-discovery-repro`
+- [x] Stage gates evaluate after each stage's work; follow-up dedupe; eval removed from pipeline wrappers
 
-## In flight
-- [ ] Devin worker `devin/build-modules`: benchmark/ (task statement, rubric 10-claim,
-      levels L1–L5, runner), pipeline/ (census 6 steps, art_family 2, rnaseq, db_subset,
-      all flag-exact + dry-run), connectors (literature/protein_db/gpu_queue),
-      skills/ (7 survey + 5 tools guides), 43 tests — receipt:
-      task-runs/20260924-devin-build/
-- [ ] gpt6pro Robin/Kosmos borrow-notes: FAILED (upstream timeout, no output) — recorded;
-      do not block on it
+## Open
+- [ ] Real-data runs of the pipeline wrappers: install the bio tools (diamond, mmseqs2,
+      hmmer, mafft, iqtree, bowtie2, seqkit) in a scratch env, then run MarsHill scan,
+      census subset, RNA-seq reanalysis (PRJNA836150) and record receipts under `task-runs/`
+- [ ] Live pilot: 1–2 tasks through the stage chain + L1 benchmark with a token cap
+      (owner decision: budget, model = Fable 5 in place of Mythos 5)
+- [ ] Threaded dispatch up to `max_concurrent_sessions` (paper: ≤58) — currently sequential
+- [ ] Contig-length-aware cluster representative in `family_definition.sh` (GAP in script header)
+- [ ] Wire the GenBank BLASTP branch into the ART pool (output currently unused)
+- [ ] Rename the local checkout directory `art-harness` → `art-discovery-repro` from a fresh session
+- [ ] Owner closeout report (goal-html-report)
 
-## Round-2 (grok delta re-verify in flight)
-- [x] Round-1 grok review: REQUEST_CHANGES, 15 findings — ALL fixed + pushed (babd1a9)
-- [x] grok delta re-verify: rounds 2-5; round-5 VERDICT: APPROVE, 0 new findings (162 tests)
-- [x] PR #1 merged to main; v0.1.0 tagged
-- [ ] local checkout dir renamed art-harness -> agent-discovery (post-review; still
-  named art-harness locally — session cwd held it; do from a fresh session)
-- [x] repo renamed agent-discovery -> agent-next/art-discovery-repro (2026-09-25,
-  paper-specific name per owner)
-- [ ] boss HTML report (goal-html-report) at closeout
-
-## Queued (I own these)
-- [ ] docs/paper-notes.md — verified facts ledger with page refs
-- [ ] REPRODUCTION.md — paper-element → component map + WHY/HOW/WHAT gap ledger
-- [ ] brief/research_brief.md — 6-anchor reconstruction (labeled non-verbatim)
-- [ ] Verify Devin PR by execution (fresh clone, make check, dry-runs, key tests)
-- [x] Independent review dispatched (grok, b8ahfz2b9) — receipt: task-runs/20260924-devin-build/grok-review.md
-- [ ] Merge via authorized gate; tag v0.1.0
-- [ ] Session handoff: memory files written (MEMORY.md index update blocked by immutable attr — owner action)
-
-## Blockers ledger (move to REPRODUCTION.md §Gaps when confirmed)
-- Supp. Note 1 verbatim brief: not released anywhere (checked: PDF, news page, HN 752
-  comments, bioRxiv/arXiv/SS/OA, Wayback) → reconstruct from 6 anchors
-- Session transcripts: not released
-- Mythos 5 checkpoint + internal signals: restricted-access model; interpretability
-  claims not independently re-runnable → substitute Fable 5, mark model-delta
-- Planetary DB build (15.8B proteins → 1.94B clusters): needs cluster-class compute;
-  provide subset builder + document scale-out path
-- Wet lab: protocols documented, execution out of scope (no lab)
+## Blockers ledger
+See REPRODUCTION.md §5 (GAP-1 … GAP-7): unreleased brief and transcripts, Mythos 5
+internals, planetary database scale, wet lab, replicate-campaign budget.
