@@ -25,7 +25,7 @@ transcriptases with tandem repeat arrays". Facts ledger: `docs/paper-notes.md`.
 | 16 | Partner scoring: 3 filters, controls, 3,564 → 16 | Methods p.30 | `pipeline/census/06` | done + tests (`test_pipeline_logic`) |
 | 17 | ART family definition: QQM14740.1 → 95 members | Methods p.31-32 | `pipeline/art_family/family_definition.sh` | done as a flag-exact wrapper (dry-run + flag tests); cluster representative = member on the longest contig (`longest_contig_reps.py`, unit-tested); never run on real data |
 | 18 | k-mer array scan (20×14-mer seeds, shuffles, R≥3) | Methods p.32 | `artharness.arrays.kmer_scan` | done + tests |
-| 19 | Array delimitation (10-mer, 30% tol, 200/2000 shuffles, PWM) | Methods p.32 | `artharness.arrays.delimit_array` + `pwm_extend` + `cross_scan` | done + tests |
+| 19 | Array delimitation (10-mer, 30% tol, 200/2000 shuffles, PWM; one-lapse consensus budget; coding-repeat exclusion + >=300nt RT-adjacency rules) | Methods p.32 | `artharness.arrays.delimit_array` + `pwm_extend` + `cross_scan` | done + tests (annotation rules flag-based; scan callers do not yet pass gene_spans — see GAP-9) |
 | 20 | Phylogeny: 774 set, MAFFT L-INS-i, IQ-TREE Q.pfam+F+R6 | Methods p.33 | `pipeline/art_family/phylogeny.sh` | done as a flag-exact wrapper (dry-run + flag tests); never run on real data |
 | 21 | RNA-seq reanalysis: PRJNA836150, Bowtie2, 8% at 15 min | Methods p.36-37 | `pipeline/rnaseq/sa1_infection.sh` | done as a flag-exact wrapper (dry-run, flag and injection tests); never run on real data |
 | 22 | Wet-lab protocols (plasmids, small-RNA-seq) | Methods p.36-37 | documented only — no lab (GAP-6) | documented |
@@ -105,6 +105,13 @@ guides' titles/contents were never published (GAP-2).
   regions) and `cross_scan` (every array's PWM scanned against every other locus to
   group arrays sharing a repeat) implemented and tested
   (`tests/test_arrays_pwm.py`). Pseudocount value NOT-IN-PAPER (1e-3 default).
+
+- **GAP-9 Delimitation rule plumbing (2026-09-29).** Both p.32 rules are
+  implemented in `delimit_array` (coding_repeat flag; rt_adjacent rule with
+  RT_ADJACENCY_GENE_MIN_NT=300) but take `gene_spans` in window coordinates —
+  no caller supplies gene annotation yet, so live scans run with the flags
+  neutral (False/None). Wiring needs an annotation source mapped into window
+  coordinates (subset DB proteins table is the natural origin).
 
 - **GAP-6 Wet lab.**
   WHY: no laboratory; protocols require BSL-1/2 work, Illumina run, cloning.

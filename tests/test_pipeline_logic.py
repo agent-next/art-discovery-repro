@@ -408,6 +408,38 @@ def test_permutation_pvalue_unenriched_is_one():
     assert p == 1.0  # every permutation ties or exceeds
 
 
+def test_promotes_null_draws_from_same_loci():
+    # Paper p.30 (verbatim): "genes of the family had to lie nearer to the RT
+    # than randomly drawn genes OF THE SAME LOCI (P <= 0.05)" — the null pool
+    # is the family's own loci, not the global neighborhood pool. When the
+    # same-loci genes are equally RT-proximal, the family must NOT be
+    # promoted, even though a global pool (mostly distant, non-qualifying
+    # loci) would give a small p. FAILING-FIRST against the global-pool code.
+    occurrences = [
+        _gene(locus_id="l1", cluster_id_90="c1", biosample="b1",
+              rt_class="retron"),
+        _gene(locus_id="l2", cluster_id_90="c2", biosample="b2",
+              rt_class="DGR"),
+        _gene(locus_id="l3", cluster_id_90="c3", biosample="b3",
+              rt_class="retron"),
+    ]
+    same_loci_qualifying = [
+        _gene(locus_id=f"l{i}", rt_adjacent=True, same_strand_as_rt=True,
+              distance_to_adjacent_bp=0)
+        for i in (1, 2, 3) for _ in range(10)
+    ]
+    other_loci_nonqualifying = [
+        _gene(locus_id=f"far{i}", rt_adjacent=False, same_strand_as_rt=False,
+              distance_to_adjacent_bp=None)
+        for i in range(500)
+    ]
+    background = same_loci_qualifying + other_loci_nonqualifying
+    promoted, p = f06.promotes(occurrences, {"cladeA": 100}, background,
+                               n_permutations=200, rng=random.Random(1))
+    assert p == 1.0, p  # same-loci draws qualify as often as the family
+    assert promoted is False
+
+
 def test_promotes_all_three_filters():
     occurrences = [
         _gene(locus_id="l1", cluster_id_90="c1", biosample="b1",
