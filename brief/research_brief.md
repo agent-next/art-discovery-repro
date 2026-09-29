@@ -23,7 +23,7 @@ candidate promotion [anchor 2].
 Background: reverse transcriptases (RTs) copy RNA into DNA. Bacterial and phage RTs
 act inside larger systems, almost always with dedicated partner components — e.g.
 retrons (RT + ncRNA + effector), diversity-generating retroelements (RT + accessory
-+ variable tandem repeats), abortive-infection RTs, and RT–CRISPR fusions. New
+components), abortive-infection RTs, and RT–CRISPR fusions. New
 partner associations are how new RT systems have historically been recognized.
 
 Reference systems to calibrate against (named examples):
