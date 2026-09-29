@@ -1,17 +1,27 @@
-.PHONY: setup check lint test fmt
+.PHONY: setup check lint shellcheck test fmt
+
+# Use the project venv when it exists (make setup / uv sync); fall back to PATH (CI).
+BIN := $(if $(wildcard .venv/bin/ruff),.venv/bin/,)
+COV_FLOOR := 94
 
 setup:
 	python3 -m venv .venv
 	.venv/bin/pip install -e '.[dev]'
 
-check: lint test
+check: lint shellcheck test
 
 lint:
-	ruff check src tests pipeline benchmark
+	$(BIN)ruff check src tests pipeline benchmark
+
+shellcheck:
+	@if command -v shellcheck >/dev/null; then \
+		shellcheck -S warning pipeline/*/*.sh; \
+	else \
+		echo "shellcheck not installed: skipping (CI runs it)"; \
+	fi
 
 test:
-	python3 -m pytest
+	$(BIN)python -m pytest --cov=artharness --cov-fail-under=$(COV_FLOOR)
 
 fmt:
-	ruff fmt src tests
-	ruff check --fix src tests
+	$(BIN)ruff check --fix src tests pipeline benchmark
