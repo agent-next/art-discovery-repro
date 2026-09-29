@@ -158,7 +158,15 @@ def run_attempt(spec: AttemptSpec, backend: Backend, judge: Judge,
     else:
         submission_data = out.get("submission", {"findings": []})
     submission_path.write_text(json.dumps(submission_data, indent=2) + "\n")
-    submission = submission_from_dict(submission_data, report_path=str(report_path))
+    try:
+        submission = submission_from_dict(submission_data,
+                                          report_path=str(report_path))
+    except (TypeError, KeyError, ValueError, AttributeError) as exc:
+        # valid JSON, malformed structure (findings not a list / items lack
+        # "claim"): MODEL failure — grade an empty submission, not a crash
+        submission = submission_from_dict({"findings": []},
+                                          report_path=str(report_path))
+        invalid_reason = f"malformed findings structure: {exc}"[:200]
     grade = judge(submission, rubric)
     base.update({
         "status": "invalid_submission" if invalid_reason else "ok",

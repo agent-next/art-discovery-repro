@@ -107,3 +107,22 @@ def test_session_written_nothing_scores_zero_ok(tmp_path):
     rec = records[0]
     assert rec["status"] == "ok"
     assert rec["score"] == 0
+
+
+def test_malformed_findings_structure_is_model_zero(tmp_path):
+    # devin round-3 (PR#20): valid JSON whose `findings` is malformed (not a
+    # list, or items missing `claim`) escaped the invalid_submission path —
+    # submission_from_dict raised uncaught and killed run_attempt.
+    def malformed(spec):
+        return {"report": "", "submission_text": '{"findings": "not-a-list"}'}
+
+    def missing_claim(spec):
+        return {"report": "", "submission_text": '{"findings": [{"no_claim": 1}]}'}
+
+    for backend in (malformed, missing_claim):
+        records = run_benchmark(models=["m"], levels=["L3"], attempts=1,
+                                outdir=tmp_path / backend.__name__,
+                                backend=backend, allow_synthetic=True)
+        rec = records[0]
+        assert rec["status"] == "invalid_submission", rec
+        assert rec["score"] == 0
