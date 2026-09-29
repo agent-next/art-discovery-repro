@@ -19,6 +19,10 @@
 #   REF_HOST    S. lentus chromosome    (paper: NZ_CP059679.1)
 #   FEATURES    feature annotation GTF  (paper: 259 features)
 #   OUTDIR      output dir              (default results/rnaseq)
+#   THREADS     worker threads for the tools that take them (default 1; NOT-IN-PAPER)
+#   KEEP_INTERMEDIATES  1 (default) keeps FASTQ/trimmed/SAM/unsorted BAM; 0 deletes them
+#               after each library's sorted BAM exists (12 libraries are ~17 GB
+#               compressed, ~10x that as FASTQ + SAM; NOT-IN-PAPER disk plumbing)
 set -euo pipefail
 
 DRY_RUN=0
@@ -36,6 +40,7 @@ REF_SA1="${REF_SA1:-data/rnaseq/MW218148.1.fna}"
 REF_HOST="${REF_HOST:-data/rnaseq/NZ_CP059679.1.fna}"
 FEATURES="${FEATURES:-data/rnaseq/features_259.gtf}"
 OUT="${OUTDIR:-results/rnaseq}"
+THREADS="${THREADS:-1}"
 
 # SECURITY (S3b 2026-09-24): argument form -- never eval. Data-derived values
 # (accessions from a file) cross a trust boundary here.
@@ -85,7 +90,7 @@ fi
 # FP-filter follow-up (2026-09-24): positional bash -c -- no interpolation
 # into the command string at all.
 run bash -c 'cat "$1" "$2" > "$3"' bash "$REF_SA1" "$REF_HOST" "$OUT/sa1_plus_host.fna"
-run bowtie2-build "$OUT/sa1_plus_host.fna" "$OUT/bt2_sa1_host"
+run bowtie2-build --threads "$THREADS" "$OUT/sa1_plus_host.fna" "$OUT/bt2_sa1_host"
 
 # NOT-IN-PAPER: accession-file plumbing. In --dry-run without the file we still
 # print the per-library commands against 12 placeholder run ids (paper: 12
@@ -110,23 +115,28 @@ while IFS= read -r acc; do
     # paper: BioProject PRJNA836150, 12 paired-end libraries
     # NOT-IN-PAPER: fetch/prefetch plumbing
     run prefetch -O "$OUT/fastq" "$acc"
-    run fasterq-dump --split-files -O "$OUT/fastq" "$acc"
+    run fasterq-dump --split-files -e "$THREADS" -O "$OUT/fastq" "$acc"
     # paper: "fastp 1.3.6 (minimum length 30 nt)". Adapter/poly-G behavior is
     # unstated for the infection runs -- NOT-IN-PAPER: fastp defaults apply.
-    run fastp --length_required 30 \
+    run fastp --length_required 30 --thread "$THREADS" \
         -i "$OUT/fastq/${acc}_1.fastq" -I "$OUT/fastq/${acc}_2.fastq" \
         -o "$OUT/trim/${acc}_1.fq.gz" -O "$OUT/trim/${acc}_2.fq.gz"
     # paper: Bowtie2 --very-sensitive -X 1000 --no-unal vs SA1 + host
-    run bowtie2 --very-sensitive -X 1000 --no-unal -x "$OUT/bt2_sa1_host" \
+    run bowtie2 --very-sensitive -X 1000 --no-unal -x "$OUT/bt2_sa1_host" -p "$THREADS" \
         -1 "$OUT/trim/${acc}_1.fq.gz" -2 "$OUT/trim/${acc}_2.fq.gz" \
         -S "$OUT/bam/${acc}.sam"
     # paper: "Properly paired alignments with MAPQ of at least 10 and a template
     # of at most 1,500 nt were retained as fragments." Flags verified against the
     # htslib samtools-view manual: -f/--require-flags (0x2 = proper pair),
     # -e/--expr with the documented `tlen` variable.
-    run samtools view -b -q 10 -f 2 -e 'tlen <= 1500 && tlen >= -1500' \
+    run samtools view -b -q 10 -f 2 -e 'tlen <= 1500 && tlen >= -1500' -@ "$THREADS" \
         -o "$OUT/bam/${acc}.bam" "$OUT/bam/${acc}.sam"
-    run samtools sort -o "$OUT/bam/${acc}.sorted.bam" "$OUT/bam/${acc}.bam"
+    run samtools sort -o "$OUT/bam/${acc}.sorted.bam" -@ "$THREADS" "$OUT/bam/${acc}.bam"
+    if [[ "${KEEP_INTERMEDIATES:-1}" == 0 ]]; then
+        run rm -rf "$OUT/fastq/${acc}" "$OUT/fastq/${acc}_1.fastq" "$OUT/fastq/${acc}_2.fastq" \
+            "$OUT/trim/${acc}_1.fq.gz" "$OUT/trim/${acc}_2.fq.gz" \
+            "$OUT/bam/${acc}.sam" "$OUT/bam/${acc}.bam"
+    fi
 done < <(acc_stream)
 
 # paper: "Each fragment was counted once on the strand of read 2 (the sense
@@ -137,7 +147,7 @@ done < <(acc_stream)
 # -t CDS matches CDS-style annotation (default 'exon' would silently give 0
 # counts). GAP: the paper's midpoint-assignment rule needs a custom counter;
 # featureCounts assigns by overlap (NOT-IN-PAPER tool choice).
-run featureCounts -p -s 2 -t CDS -a "$FEATURES" -o "$OUT/counts.tsv" "$OUT"/bam/*.sorted.bam
+run featureCounts -p -s 2 -t CDS -T "$THREADS" -a "$FEATURES" -o "$OUT/counts.tsv" "$OUT"/bam/*.sorted.bam
 if [[ "$DRY_RUN" -eq 1 ]]; then
     echo "python3 - $OUT/counts.tsv $OUT/tpm.tsv  # TPM = (count/len)/sum(count/len)*1e6"
 else

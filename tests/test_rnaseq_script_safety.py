@@ -58,3 +58,18 @@ def test_accession_gate_accepts_real_accessions():
             "for acc in SRR1234567 ERR987654; do acc_ok \"$acc\" || exit 1; done; echo OK")
     out = subprocess.run(["bash", "-c", bash], capture_output=True, text=True)
     assert "OK" in out.stdout
+
+
+def test_keep_intermediates_zero_deletes_only_this_librarys_scratch(tmp_path: Path):
+    accs = tmp_path / "acc.txt"
+    accs.write_text("SRR19152328\n")
+    env = {"PATH": "/usr/bin:/bin", "KEEP_INTERMEDIATES": "0", "OUTDIR": "out"}
+    out = subprocess.run(["bash", str(SCRIPT), "--dry-run", str(accs)],
+                         capture_output=True, text=True, env=env).stdout
+    rm = [ln for ln in out.splitlines() if ln.startswith("rm -rf")]
+    assert len(rm) == 1
+    assert "out/bam/SRR19152328.sam" in rm[0] and "out/trim/SRR19152328_1.fq.gz" in rm[0]
+    assert "sorted.bam" not in rm[0]
+    keep = subprocess.run(["bash", str(SCRIPT), "--dry-run", str(accs)], capture_output=True,
+                          text=True, env={**env, "KEEP_INTERMEDIATES": "1"}).stdout
+    assert "rm -rf" not in keep
