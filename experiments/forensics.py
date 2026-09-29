@@ -25,6 +25,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+from dataclasses import dataclass
 from pathlib import Path
 
 DNA_RUN = re.compile(r"[ACGTacgt]{200,}")  # paper: contiguous DNA string of >=200 nt
@@ -58,6 +59,38 @@ def _unwrap_dna_lines(lines: list[str]) -> list[str]:
 
 def load_identifiers(path: Path) -> set[str]:
     return {line.strip() for line in path.read_text().splitlines() if line.strip()}
+
+
+# paper Methods p.38: 130 RT ids, 171 contig ids
+PAPER_IDENTIFIER_COUNTS = {"rt_ids": 130, "contig_ids": 171}
+
+
+@dataclass(frozen=True)
+class IdentifierSets:
+    """The paper's TWO identifier sets (Methods p.38: 130 RT ids, 171 contig
+    ids) — kept distinct because only sessions naming a CONTIG are parsed
+    event-by-event; a flat set cannot express that."""
+
+    rt_ids: frozenset[str]
+    contig_ids: frozenset[str]
+
+    @property
+    def paper_counts(self) -> dict[str, int]:
+        return dict(PAPER_IDENTIFIER_COUNTS)  # paper p.38
+
+    @property
+    def all(self) -> frozenset[str]:
+        return self.rt_ids | self.contig_ids
+
+    def contig_named(self, named: set[str]) -> set[str]:
+        """Which of the identifiers a session named are CONTIG ids."""
+        return {n for n in named if n in self.contig_ids}
+
+
+def load_identifier_sets(rt_path: Path, contig_path: Path) -> IdentifierSets:
+    return IdentifierSets(
+        rt_ids=frozenset(load_identifiers(rt_path)),
+        contig_ids=frozenset(load_identifiers(contig_path)))
 
 
 def scan_records(records_root: Path, ids: set[str]) -> dict[str, list[str]]:
