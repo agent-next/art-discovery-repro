@@ -16,20 +16,22 @@ SCRIPT = Path(__file__).parent.parent / "pipeline" / "db" / "build_subset.sh"
 def _apply_filters_python() -> str:
     """Extract the python program embedded in apply_filters' heredoc."""
     text = SCRIPT.read_text()
-    m = re.search(r"apply_filters\(\) \{\s*python3 - \"\$1\" \"\$2\" \"\$3\" <<'PY'\n(.*?)\nPY\n\}",
+    m = re.search(r"python3 - \"\$1\" \"\$2\" \"\$3\" \"\$\{4:-prodigal\}\" <<'PY'\n(.*?)\nPY\n\}",
                   text, re.DOTALL)
     assert m, "apply_filters heredoc not found"
     return m.group(1)
 
 
-def _run_filters(proteins: str, masks: str, tmp_path: Path) -> str:
+def _run_filters(proteins: str, masks: str, tmp_path: Path,
+                mode: str = "prodigal") -> str:
+    tmp_path.mkdir(parents=True, exist_ok=True)
     src = tmp_path / "proteins.faa"
     mask = tmp_path / "tantan.faa"
     out = tmp_path / "filtered.faa"
     src.write_text(proteins)
     mask.write_text(masks)
     subprocess.run(["python3", "-c", _apply_filters_python(), str(src), str(mask),
-                    str(out)], check=True)
+                    str(out), mode], check=True)
     return out.read_text()
 
 
@@ -53,6 +55,24 @@ def test_exact_duplicates_are_deduplicated(tmp_path: Path):
     masks = f">x\n{good}\n"
     out = _run_filters(proteins, masks, tmp_path)
     assert out.count(">dup") == 1, out
+
+
+def test_annotated_mode_keeps_source_gene_calls_lacking_partial_flag(
+        tmp_path: Path):
+    # devin round-3: prodigal-mode partial=00 gate dropped ALL annotated
+    # source gene calls (their headers carry no partial flag) — annotated
+    # mode must retain them; prodigal mode still drops partial CDS.
+    good = "MKTAYIAKQRQISFVKSHFSRQ" * 4
+    good2 = "MRKTLASIAKQRQISFVKSHFSRQ" * 4  # distinct: dedup must keep both
+    proteins = (f">src_gene1 len=92\n{good}\n"          # annotated header
+                f">call1 partial=10 start=1 end=92\n{good2}\n")  # prodigal hdr
+    masks = f">x\n{good}\n"
+    annotated = _run_filters(proteins, masks, tmp_path / "ann", mode="annotated")
+    assert ">src_gene1" in annotated, annotated   # retained verbatim
+    assert ">call1" in annotated, annotated       # gate skipped, others apply
+    prodigal = _run_filters(proteins, masks, tmp_path / "pro")
+    assert ">src_gene1" not in prodigal, prodigal  # no partial=00 -> dropped
+    assert ">call1" not in prodigal, prodigal      # partial=10 -> dropped
 
 
 def test_run_benchmark_refuses_missing_inputs_without_opt_in(tmp_path: Path):

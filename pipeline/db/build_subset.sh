@@ -45,7 +45,10 @@ source "$(dirname "${BASH_SOURCE[0]}")/../lib/run.sh"
 # placeholder: drop sequences whose distinct 3-mer count is <= 3 (effectively
 # a single short repeat unit).
 apply_filters() {
-    python3 - "$1" "$2" "$3" <<'PY'
+    # mode: prodigal (default) enforces the partial=00 completeness gate on
+    # prodigal headers; annotated skips it — source gene calls are retained
+    # verbatim and carry no partial flag (paper p.28).
+    python3 - "$1" "$2" "$3" "${4:-prodigal}" <<'PY'
 import sys
 
 AA20 = set("ACDEFGHIKLMNPQRSTVWY")
@@ -66,6 +69,8 @@ def read_fasta(path):
         yield name, "".join(chunks)
 
 
+mode = sys.argv[4] if len(sys.argv) > 4 else "prodigal"
+
 masked = {h.split()[0]: seq for h, seq in read_fasta(sys.argv[2])}
 # keys are FIRST TOKENS: tantan preserves the original header, and the lookup
 # below keys on the first token — keying this dict on the FULL header made the
@@ -76,8 +81,8 @@ seen_seqs = set()  # paper: "Proteins were deduplicated" (NOT-IN-PAPER: exact-
 
 with open(sys.argv[3], "w") as out:
     for header, seq in read_fasta(sys.argv[1]):
-        if "partial=00" not in header:  # paper: exclude incomplete CDS
-            continue
+        if mode == "prodigal" and "partial=00" not in header:
+            continue  # paper: exclude incomplete CDS (prodigal output only)
         if not set(seq) <= AA20:  # paper: exclude non-standard amino acids
             continue
         if len(seq) > 8000:  # paper: exclude >8,000 residues
@@ -144,8 +149,10 @@ fi
 if [[ -n "${ANNOTATED_FAA:-}" ]]; then
     run_sh 'cp "$1" "$2"  # retain source gene calls (annotated assemblies)' \
         "$ANNOTATED_FAA" "$OUT/proteins_raw.faa"
+    FILTER_MODE=annotated
 else
     run prodigal-gv -i "$GENOME_FNA" -a "$OUT/proteins_raw.faa"
+    FILTER_MODE=prodigal
 fi
 
 # paper: >=50% low-complexity via tantan (tantan masks low-complexity as
@@ -155,9 +162,9 @@ run_sh 'tantan "$1" > "$2"' "$OUT/proteins_raw.faa" "$OUT/proteins_tantan.faa"
 # paper filters: incomplete CDS, non-standard amino acids, >8,000 residues,
 # degenerate k-mer repeats, >=50% low-complexity
 if [[ "$DRY_RUN" -eq 1 ]]; then
-    echo "python3 - $OUT/proteins_raw.faa $OUT/proteins_tantan.faa $OUT/proteins_filt.faa  # paper filters: complete CDS only; standard aa; <=8000 aa; non-degenerate k-mers; <50% low-complexity"
+    echo "python3 - $OUT/proteins_raw.faa $OUT/proteins_tantan.faa $OUT/proteins_filt.faa $FILTER_MODE  # paper filters: standard aa; <=8000 aa; non-degenerate k-mers; <50% low-complexity; complete-CDS gate in prodigal mode only (annotated source calls carry no partial flag)"
 else
-    apply_filters "$OUT/proteins_raw.faa" "$OUT/proteins_tantan.faa" "$OUT/proteins_filt.faa"
+    apply_filters "$OUT/proteins_raw.faa" "$OUT/proteins_tantan.faa" "$OUT/proteins_filt.faa" "$FILTER_MODE"
 fi
 
 # paper: DIAMOND linear-time clustering at 90% then 70% identity with >=80%
