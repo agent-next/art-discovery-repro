@@ -296,3 +296,22 @@ def test_ungapped_and_aligned_measurements_pair():
     stub_len = arrays.aligned_repeat_length(["ACGTACGTTA"] * 3,
                                             mafft_exe=None)  # explicit None
     assert stub_len is None  # None exe == unavailable, not an error
+
+
+def test_exact_word_retention_fires_only_when_kmer_scan_declines():
+    # devin round-3: the earlier fixture's spacers let kmer_scan itself call
+    # an array (14-mers spanning word+spacer recurred), so the fallback never
+    # fired — vacuous. Random 4-base spacers per copy + a precondition
+    # assertion make the fallback the deciding rule.
+    word = "ACGTACGTACGT"  # 12 nt: below the 14-mer scan, at exact-word length
+    rng = random.Random(7)
+    ends = [("AA", "AC"), ("CG", "GT"), ("TT", "TA")]  # distinct 14-mer flanks
+    parts = []
+    for pre2, post2 in ends:
+        parts.append(word)
+        parts.append(pre2 + "".join(rng.choice("ACGT") for _ in range(84)) + post2)
+    up = "".join(parts)
+    pre = arrays.kmer_scan("L_pre", up, random.Random(0))
+    assert pre.status != "array"  # precondition: the DEFAULT setting declines
+    call = arrays.scan_with_exact_word_fallback("L_r3", up, random.Random(0))
+    assert call.status == "array" and call.R == 3  # retention rule fires
