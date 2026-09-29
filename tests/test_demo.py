@@ -220,6 +220,48 @@ def test_walkthrough_is_generated_from_the_run(rule_run):
         assert needle in text
 
 
+def _replay_data(run_dir: Path) -> dict:
+    page = (run_dir / "replay.html").read_text()
+    m = re.search(r'<script id="data" type="application/json">(.*?)</script>', page, re.S)
+    assert m, "replay page lost its embedded data"
+    return json.loads(m.group(1))
+
+
+def test_replay_events_agree_with_the_campaign_report(rule_run):
+    res = rule_run[0]
+    events = _replay_data(res.out)["events"]
+    kinds = [e["k"] for e in events]
+    assert json.loads((res.out / "events.json").read_text()) == events
+    assert kinds.count("task") == res.report.tasks_total
+    assert kinds.count("gate") == 5 and all(e["ok"] for e in events if e["k"] == "gate")
+    assert sum(1 for e in events if e["k"] == "triage" and not e["ok"]) == 1
+    assert sum(1 for e in events if e["k"] == "session" and e["verdict"] == "revise") == 1
+    assert kinds[-1] == "report" and events[-1]["filed"] is True
+
+
+def test_replay_page_is_self_contained_and_survives_hostile_text(tmp_path: Path):
+    from artharness.demo.replay import write_replay
+
+    nasty = "</script><script>alert(1)</script>"
+    path = write_replay(tmp_path, [{"k": "task", "id": "t1", "brief": nasty}],
+                        {"line": nasty, "score": "", "summary": ""})
+    page = path.read_text()
+    assert page.count("</script>") == 2  # the data block and the player, nothing injected
+    assert not re.search(r'(src|href)="', page) and "https://" not in page
+    assert _replay_data(tmp_path)["events"][0]["brief"] == nasty
+
+
+def test_readme_hero_svg_is_well_formed_and_its_timeline_is_wired():
+    import xml.etree.ElementTree as ET
+
+    svg = Path(__file__).parent.parent / "docs" / "assets" / "how-it-works.svg"
+    root = ET.parse(svg).getroot()
+    ids = {el.get("id") for el in root.iter() if el.get("id")}
+    refs = set(re.findall(r'begin="[^"]*?\b(s\d+)\.(?:begin|end)', svg.read_text()))
+    assert {f"s{i}" for i in range(1, 11)} <= ids and refs <= ids
+    assert not any(el.tag.endswith("script") for el in root.iter())
+
+
 def test_no_stage_revision_flag_removes_the_revision(tmp_path: Path):
     res = run_demo(DemoOptions(out=tmp_path / "r", stage_revision=False, explain=False),
                    lambda _s: None)
