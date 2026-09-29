@@ -83,3 +83,17 @@ def test_aligner_streams_into_the_filter_without_an_intermediate_sam(tmp_path: P
     assert ".sam" not in out and "-S " not in out
     assert "bowtie2 --very-sensitive -X 1000 --no-unal" in out and "|" in out
     assert "samtools view -b -q 10 -f 2" in out
+
+
+def test_ena_source_downloads_gz_and_skips_fasterq_dump(tmp_path: Path):
+    accs = tmp_path / "acc.txt"
+    accs.write_text("SRR19152328\n")
+    env = {"PATH": "/usr/bin:/bin", "FASTQ_SOURCE": "ena", "OUTDIR": "out",
+           "KEEP_INTERMEDIATES": "0"}
+    out = subprocess.run(["bash", str(SCRIPT), "--dry-run", str(accs)],
+                         capture_output=True, text=True, env=env).stdout
+    assert "fasterq-dump" not in out and "prefetch" not in out
+    assert "filereport?accession=$1" in out and "bash SRR19152328 out/fastq" in out
+    assert "-i out/fastq/SRR19152328_1.fastq.gz -I out/fastq/SRR19152328_2.fastq.gz" in out
+    assert "out/fastq/SRR19152328_1.fastq.gz out/fastq/SRR19152328_2.fastq.gz" in [
+        ln for ln in out.splitlines() if ln.startswith("rm -rf")][0]

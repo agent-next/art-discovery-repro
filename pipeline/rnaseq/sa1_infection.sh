@@ -20,6 +20,8 @@
 #   FEATURES    feature annotation GTF  (paper: 259 features)
 #   OUTDIR      output dir              (default results/rnaseq)
 #   THREADS     worker threads for the tools that take them (default 1; NOT-IN-PAPER)
+#   FASTQ_SOURCE  sra (default: prefetch + fasterq-dump, ~10 GB of plain FASTQ per
+#               library) or ena (the run's .fastq.gz from ENA, ~1.4 GB); NOT-IN-PAPER
 #   KEEP_INTERMEDIATES  1 (default) keeps FASTQ/trimmed/SAM/unsorted BAM; 0 deletes them
 #               after each library's sorted BAM exists (12 libraries are ~17 GB
 #               compressed, ~10x that as FASTQ + SAM; NOT-IN-PAPER disk plumbing)
@@ -41,6 +43,7 @@ REF_HOST="${REF_HOST:-data/rnaseq/NZ_CP059679.1.fna}"
 FEATURES="${FEATURES:-data/rnaseq/features_259.gtf}"
 OUT="${OUTDIR:-results/rnaseq}"
 THREADS="${THREADS:-1}"
+FASTQ_SOURCE="${FASTQ_SOURCE:-sra}"
 
 # SECURITY (S3b 2026-09-24): argument form -- never eval. Data-derived values
 # (accessions from a file) cross a trust boundary here.
@@ -114,12 +117,23 @@ while IFS= read -r acc; do
     fi
     # paper: BioProject PRJNA836150, 12 paired-end libraries
     # NOT-IN-PAPER: fetch/prefetch plumbing
-    run prefetch -O "$OUT/fastq" "$acc"
-    run fasterq-dump --split-files -e "$THREADS" -O "$OUT/fastq" "$acc"
+    if [[ "$FASTQ_SOURCE" == ena ]]; then
+        run bash -c 'set -o pipefail
+            for n in 1 2; do
+                url=$(curl -fsSL "https://www.ebi.ac.uk/ena/portal/api/filereport?accession=$1&result=read_run&fields=fastq_ftp&format=tsv" |
+                    tail -n +2 | tr ";" "\n" | grep "_${n}.fastq.gz")
+                curl -fsSL -o "$2/$1_${n}.fastq.gz" "https://${url}"
+            done' bash "$acc" "$OUT/fastq"
+        r1="$OUT/fastq/${acc}_1.fastq.gz" r2="$OUT/fastq/${acc}_2.fastq.gz"
+    else
+        run prefetch -O "$OUT/fastq" "$acc"
+        run fasterq-dump --split-files -e "$THREADS" -O "$OUT/fastq" "$acc"
+        r1="$OUT/fastq/${acc}_1.fastq" r2="$OUT/fastq/${acc}_2.fastq"
+    fi
     # paper: "fastp 1.3.6 (minimum length 30 nt)". Adapter/poly-G behavior is
     # unstated for the infection runs -- NOT-IN-PAPER: fastp defaults apply.
     run fastp --length_required 30 --thread "$THREADS" \
-        -i "$OUT/fastq/${acc}_1.fastq" -I "$OUT/fastq/${acc}_2.fastq" \
+        -i "$r1" -I "$r2" \
         -o "$OUT/trim/${acc}_1.fq.gz" -O "$OUT/trim/${acc}_2.fq.gz"
     # paper: Bowtie2 --very-sensitive -X 1000 --no-unal vs SA1 + host
     # paper: "Properly paired alignments with MAPQ of at least 10 and a template
@@ -135,7 +149,7 @@ while IFS= read -r acc; do
         "$OUT/trim/${acc}_2.fq.gz" "$OUT/bam/${acc}.bam"
     run samtools sort -o "$OUT/bam/${acc}.sorted.bam" -@ "$THREADS" "$OUT/bam/${acc}.bam"
     if [[ "${KEEP_INTERMEDIATES:-1}" == 0 ]]; then
-        run rm -rf "$OUT/fastq/${acc}" "$OUT/fastq/${acc}_1.fastq" "$OUT/fastq/${acc}_2.fastq" \
+        run rm -rf "$OUT/fastq/${acc}" "$r1" "$r2" \
             "$OUT/trim/${acc}_1.fq.gz" "$OUT/trim/${acc}_2.fq.gz" \
             "$OUT/bam/${acc}.bam"
     fi
