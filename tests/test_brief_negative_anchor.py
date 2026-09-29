@@ -3,8 +3,8 @@ research brief mentioned repeats or arrays." The reconstructed brief's body
 must preserve that negative anchor — any mention of repeats/arrays leaks the
 discovery the harness is supposed to find on its own. The provenance warning
 block at the top is meta-commentary about the anchor and is exempt."""
-import re
 import pathlib
+import re
 
 BRIEF = pathlib.Path(__file__).resolve().parents[1] / "brief" / "research_brief.md"
 LEAK = re.compile(r"\b(repeat|array|tandem)s?\b", re.IGNORECASE)
