@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ART harness replay</title>
+<style>
+  :root { --ink:#1d2433; --mute:#6b7488; --line:#d5dbe6; --bg:#f6f8fb; --card:#fff;
+          --ok:#1a9d5c; --bad:#d64545; --warn:#e08a1e; --blue:#2f6fed; --violet:#7a4fd6; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+         color:var(--ink); background:var(--bg); }
+  header { padding:14px 22px 6px; display:flex; flex-wrap:wrap; gap:8px 24px; align-items:baseline; }
+  h1 { font-size:19px; margin:0; }
+  .meta { color:var(--mute); font-size:13px; }
+  .wrap { max-width:1240px; margin:0 auto; padding:0 14px 26px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; }
+  svg { width:100%; height:auto; display:block; }
+  .counters { display:flex; flex-wrap:wrap; gap:8px; padding:10px 6px 4px; }
+  .counter { background:var(--card); border:1px solid var(--line); border-radius:10px;
+             padding:5px 12px; font-size:13px; color:var(--mute); }
+  .counter b { color:var(--ink); font-size:16px; margin-right:4px; }
+  .caption { padding:12px 18px; min-height:92px; margin-top:10px; }
+  .caption .what { font-weight:600; font-size:16px; }
+  .caption .why { color:var(--mute); margin-top:4px; }
+  .caption .why::before { content:"why  "; font-weight:700; color:var(--blue); }
+  .controls { display:flex; align-items:center; gap:10px; padding:10px 6px; flex-wrap:wrap; }
+  button { font:inherit; border:1px solid var(--line); background:var(--card); border-radius:8px;
+           padding:5px 12px; cursor:pointer; color:var(--ink); }
+  button:hover { border-color:var(--blue); }
+  button.primary { background:var(--blue); border-color:var(--blue); color:#fff; min-width:78px; }
+  input[type=range] { flex:1; min-width:220px; accent-color:var(--blue); }
+  select { font:inherit; border:1px solid var(--line); border-radius:8px; padding:4px 6px; }
+  .ticks { display:block; height:14px; margin:0 6px; }
+  .station rect { fill:var(--card); stroke:var(--line); stroke-width:1.5; }
+  .station text.title { font-weight:700; font-size:15px; fill:var(--ink); }
+  .station text.sub { font-size:11.5px; fill:var(--mute); }
+  .station.hot rect { stroke:var(--blue); stroke-width:3; }
+  .station.hot.bad rect { stroke:var(--bad); }
+  .station.hot.good rect { stroke:var(--ok); }
+  .arrow { stroke:var(--line); stroke-width:2.5; fill:none; marker-end:url(#ah); }
+  .token { transition:transform .9s cubic-bezier(.4,0,.2,1), opacity .5s; }
+  .token circle { stroke:#fff; stroke-width:2; }
+  .token text { font-size:11px; font-weight:700; fill:#fff; text-anchor:middle; dominant-baseline:central; }
+  .token.ghost circle { fill:#fff !important; stroke:var(--mute); stroke-dasharray:3 3; }
+  .token.ghost text { fill:var(--mute); }
+  .stage rect { fill:#eef1f7; stroke:var(--line); }
+  .stage text { font-size:12.5px; font-weight:600; fill:var(--mute); text-anchor:middle; }
+  .stage.active rect { fill:#e6efff; stroke:var(--blue); stroke-width:2; }
+  .stage.active text { fill:var(--blue); }
+  .stage.done rect { fill:#e5f6ed; stroke:var(--ok); }
+  .stage.done text { fill:var(--ok); }
+  .stage.fail rect { fill:#fdeaea; stroke:var(--bad); }
+  .stage.fail text { fill:var(--bad); }
+  .gate path { fill:var(--mute); }
+  .gate.ok path { fill:var(--ok); } .gate.no path { fill:var(--bad); }
+  .pop { animation:pop .5s ease-out both; transform-box:fill-box; transform-origin:center; }
+  @keyframes pop { from { opacity:0; transform:scale(.6);} to { opacity:1; transform:scale(1);} }
+  .fly { animation:fade .6s ease-out both; } @keyframes fade { from { opacity:0;} to { opacity:1;} }
+  .bubble rect { fill:#fff; stroke-width:2; } .bubble text { font-size:12px; fill:var(--ink); }
+  .bubble.bad rect { stroke:var(--bad); } .bubble.good rect { stroke:var(--ok); }
+  .bubble.warn rect { stroke:var(--warn); } .bubble.info rect { stroke:var(--blue); }
+  .chip rect { fill:#eef4ff; stroke:var(--blue); } .chip text { font-size:11.5px; fill:var(--blue); }
+  .chip.err rect { fill:#fdeaea; stroke:var(--bad); } .chip.err text { fill:var(--bad); }
+  .kbdot { stroke:#fff; stroke-width:1.5; }
+  .banner { padding:14px 18px; margin-top:10px; border-left:5px solid var(--blue); }
+  .banner.bad { border-left-color:var(--bad); } .banner.good { border-left-color:var(--ok); }
+  @media (prefers-reduced-motion: reduce) { .token { transition:none; } .pop,.fly { animation:none; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>ART harness replay</h1>
+  <span class="meta" id="meta"></span>
+</header>
+<div class="wrap">
+  <div class="card"><svg id="scene" viewBox="0 0 1200 620" role="img"
+       aria-label="Animated replay of the campaign"></svg></div>
+  <div class="counters" id="counters"></div>
+  <div class="card caption" id="caption"><div class="what"></div><div class="why"></div></div>
+  <div id="banner"></div>
+  <div class="controls">
+    <button id="prev">&#9664; Back</button>
+    <button id="play" class="primary">Play</button>
+    <button id="next">Step &#9654;</button>
+    <input id="scrub" type="range" min="0" value="0">
+    <label class="meta">speed <select id="speed"><option value="0.5">0.5x</option>
+      <option value="1" selected>1x</option><option value="2">2x</option>
+      <option value="4">4x</option></select></label>
+  </div>
+  <svg id="ticks" class="ticks" preserveAspectRatio="none"></svg>
+  <p class="meta">Space: play/pause &middot; arrows: step. Every frame is one recorded event of the run
+  (<code>events.json</code>); nothing here is scripted for show.</p>
+</div>
+<script id="data" type="application/json">__DATA__</script>
+<script>
+const D = JSON.parse(document.getElementById('data').textContent);
+const NS = 'http://www.w3.org/2000/svg';
+const STAGES = ['1_input_assembly','2_database_sweep','3_rt_classification',
+                '4_neighborhood_census','5_deep_dives'];
+const STAGE_LABEL = ['1 Inventory','2 Sweep','3 Classify','4 Census','5 Deep dives'];
+const HUE = ['#2f6fed','#0e9aa7','#7a4fd6','#e08a1e','#d6457a'];
+const ST = {   // station boxes: x, y, w, h
+  queue:[40,240,140,120], worker:[300,240,150,120], supervisor:[570,240,150,120],
+  curator:[840,240,140,120], kb:[1030,240,140,120],
+  sandbox:[300,430,150,90], triage:[300,110,150,80], bin:[490,110,110,80],
+  editor:[570,430,150,90], report:[840,430,140,90]
+};
+const TITLE = {queue:['Task queue','open tasks wait here'], worker:['Worker','plans, runs tools, writes'],
+  supervisor:['Supervisor','checks claims, accepts or returns'], curator:['Curator','files the finding'],
+  kb:['Knowledge base','read by later agents'], sandbox:['Sandbox tools','the only place work happens'],
+  triage:['Triage','release or reject follow-ups'], bin:['Rejected','each with a written reason'],
+  editor:['Editor','last check before filing'], report:['Report','filed only if approved']};
+
+const WHY = {
+  task:'Every task is a folder in git: brief, plan, summary, verdicts. That is the audit trail people monitor.',
+  worker:'The worker proposes a plan and executes it with tools. It cannot approve its own work.',
+  supervisor:'A second agent reviews the work. The claim check is code, so a model cannot talk its way past it.',
+  revise:'A "revise" carries the exact fix and the worker sees it on the next pass (paper: 49 of 119 tasks were revised).',
+  curator:'Accepted findings go into a shared knowledge base that later workers and supervisors read.',
+  gate:'Gates are scripts, not opinions: they recompute a stage\'s outputs from raw input. No later stage opens until they pass.',
+  triage:'Agents can invent unlimited work. Triage releases or rejects each follow-up and writes the reason down.',
+  editor:'A report is filed only after an editor review (paper: 52 editor sessions for 19 reports).',
+  stop:'A failed gate keeps later stages closed. That is the harness working, not breaking.'
+};
+
+// ---- steps: the recorded events, in order, plus a closing frame -------------------------
+const steps = D.events.concat([{k:'end'}]);
+
+// ---- state --------------------------------------------------------------------
+function fresh() {
+  return {tokens:{}, ghosts:[], kb:0, kbTasks:[], stage:{}, active:null, rej:[], sheet:null,
+          c:{tasks:0, sessions:0, revised:0, released:0, rejected:0, tokens:0}, revisedIds:{}};
+}
+function stageIdx(s) { return Math.max(0, STAGES.indexOf(s)); }
+function apply(st, e, isLast) {
+  const dec = [];
+  // tokens that were being curated settle into the knowledge base on the next event
+  for (const t of Object.values(st.tokens))
+    if (t.at === 'curator' && !(e.k === 'session' && e.id === t.id)) t.at = 'kb';
+  if (e.k === 'task') {
+    if (e.origin === 'follow_up' && st.ghosts.length) st.ghosts.shift();
+    st.tokens[e.id] = {id:e.id, stage:e.stage, at:'queue', follow:e.origin === 'follow_up'};
+    st.c.tasks++; st.active = e.stage;
+    if (isLast) dec.push({t:'bubble', at:'queue', kind:'info', lines:wrap('opens: ' + e.brief, 30)});
+  } else if (e.k === 'session') {
+    const t = st.tokens[e.id]; st.c.sessions++; st.c.tokens += (e.tin||0) + (e.tout||0);
+    if (e.role === 'worker' && t) {
+      t.at = 'worker';
+      if (isLast) (e.tools||[]).forEach((x,i) => dec.push({t:'chip', i, err:!x.ok,
+                   text:x.tool + ' \u2192 ' + short(x.headline, 34)}));
+      if (isLast && !(e.tools||[]).length) dec.push({t:'bubble', at:'worker', kind:'warn', lines:['ran no tool']});
+    } else if (e.role === 'supervisor' && t) {
+      t.at = 'supervisor';
+      if (e.verdict === 'accept') { if (isLast) dec.push({t:'bubble', at:'supervisor', kind:'good', lines:['\u2713 accepted']}); }
+      else {
+        if (!st.revisedIds[e.id]) { st.revisedIds[e.id] = 1; st.c.revised++; }
+        if (isLast) dec.push({t:'bubble', at:'supervisor', kind:'bad',
+                     lines:['\u21ba sent back:'].concat(wrap(cleanNote(e.note), 30).slice(0,4))});
+      }
+    } else if (e.role === 'curator' && t) { t.at = 'curator'; st.kb++; st.kbTasks.push(t); }
+    else if (e.role === 'editor') {
+      st.sheet = st.sheet || {at:'editor'}; st.sheet.at = 'editor';
+      if (isLast) dec.push({t:'bubble', at:'editor', kind:e.verdict === 'yes' ? 'good':'bad',
+                   lines:[e.verdict === 'yes' ? '\u2713 FILE: yes' : '\u2717 FILE: no']});
+    }
+  } else if (e.k === 'gate') {
+    st.stage[e.stage] = e.ok ? 'done' : 'fail';
+    if (isLast) dec.push({t:'gate', stage:e.stage, ok:e.ok});
+  } else if (e.k === 'triage') {
+    if (e.ok) {
+      st.c.released++; const par = st.tokens[e.parent];
+      st.ghosts.push({stage: par ? par.stage : st.active, label:'?'});
+    } else { st.c.rejected++; st.rej.push(e); }
+    if (isLast) dec.push({t:'triage', ok:e.ok, text:short(e.brief, 30),
+                 lines:e.ok ? ['released to queue'] : ['rejected:'].concat(wrap(e.why, 22).slice(0,4))});
+  } else if (e.k === 'report') {
+    st.sheet = st.sheet || {at:'editor'}; st.sheet.at = e.filed ? 'report' : 'editor';
+    if (isLast) dec.push({t:'bubble', at:'report', kind:e.filed ? 'good':'bad',
+                 lines:[e.filed ? '\u2713 filed' : 'not filed']});
+  }
+  return dec;
+}
+function stateAt(i) {
+  const st = fresh(); let dec = [];
+  for (let j = 0; j <= i; j++) dec = apply(st, steps[j], j === i);
+  return {st, dec};
+}
+
+// ---- text ---------------------------------------------------------------------------
+function short(s, n) { s = String(s||''); return s.length > n ? s.slice(0, n-1) + '\u2026' : s; }
+function wrap(s, n) {
+  const out = []; let cur = '';
+  for (const w of String(s||'').replace(/\s+/g,' ').trim().split(' ')) {
+    if ((cur + ' ' + w).trim().length > n) { if (cur) out.push(cur); cur = w; } else cur = (cur + ' ' + w).trim();
+  }
+  if (cur) out.push(cur); return out;
+}
+function cleanNote(s) {
+  const first = String(s||'').split('\n').map(x => x.replace(/^[-\s]+/, '')).find(x => x && !x.startsWith('VERDICT')) || 'no reason given';
+  return first;
+}
+function caption(e, st) {
+  const nextStage = g => STAGES[STAGES.indexOf(g) + 1];
+  switch (e.k) {
+    case 'task': return [`Task ${e.id} opens${e.parent ? ' as a follow-up of ' + e.parent : ''}: ${e.brief}`, WHY.task];
+    case 'session':
+      if (e.role === 'worker') return [`${e.id} \u00b7 worker ` + ((e.tools||[]).length
+        ? 'ran ' + e.tools.map(t => t.tool + ' \u2192 ' + short(t.headline, 60)).join('; ')
+        : 'ran NO tool and wrote a summary from memory'), WHY.worker];
+      if (e.role === 'supervisor') return e.verdict === 'accept'
+        ? [`${e.id} \u00b7 supervisor checked every claim against the tool log: accepted`, WHY.supervisor]
+        : [`${e.id} \u00b7 supervisor sent it back: ${short(cleanNote(e.note), 150)}`, WHY.revise];
+      if (e.role === 'curator') return [`${e.id} \u00b7 curator filed the finding in the knowledge base (${st.kb} entries now)`, WHY.curator];
+      return [`${e.id} \u00b7 editor reviewed the draft report: FILE ${e.verdict}`, WHY.editor];
+    case 'gate': return e.ok
+      ? [`Gate ${e.stage} PASSED: a script recomputed the stage's outputs from the raw input` + (nextStage(e.stage) ? `; ${nextStage(e.stage)} may now open` : '; the chain is complete'), WHY.gate]
+      : [`Gate ${e.stage} FAILED: ${e.why}`, WHY.stop];
+    case 'triage': return e.ok
+      ? [`Follow-up released to the queue: ${short(e.brief, 110)}`, WHY.triage]
+      : [`Follow-up REJECTED: ${e.why}`, WHY.triage];
+    case 'report': return [e.filed ? `Report ${e.id} filed after editor approval` : `Report ${e.id} was not filed`, WHY.editor];
+    case 'stop': return [`Campaign stopped: ${e.why}`, WHY.stop];
+    default: return [D.meta.summary || 'Run complete.', 'Scroll back through the steps to see any moment again.'];
+  }
+}
+
+// ---- rendering ------------------------------------------------------------------------
+const svg = document.getElementById('scene');
+const mk = (tag, attrs, parent) => { const n = document.createElementNS(NS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]); (parent || svg).appendChild(n); return n; };
+const center = k => [ST[k][0] + ST[k][2]/2, ST[k][1] + ST[k][3]/2];
+const stationEl = {}; const tokenEl = {}; let dynLayer, stageEls = [], gateEls = [];
+
+function build() {
+  const defs = mk('defs', {});
+  const m = mk('marker', {id:'ah', viewBox:'0 0 10 10', refX:'8', refY:'5', markerWidth:'7', markerHeight:'7', orient:'auto'}, defs);
+  mk('path', {d:'M0,0 L10,5 L0,10 z', fill:'#c3cbda'}, m);
+  STAGES.forEach((s, i) => {
+    const x = 40 + i * 226;
+    const g = mk('g', {class:'stage'}); mk('rect', {x, y:22, width:196, height:36, rx:18}, g);
+    const t = mk('text', {x:x + 98, y:45}, g); t.textContent = STAGE_LABEL[i]; stageEls.push(g);
+    const gg = mk('g', {class:'gate', transform:`translate(${x + 200},30)`});
+    mk('path', {d:'M0,0 h8 v20 h-8 z M-2,10 h12', stroke:'none'}, gg); gateEls.push(gg);
+  });
+  const t = mk('text', {x:600, y:88, 'text-anchor':'middle', 'font-size':12, fill:'#6b7488'});
+  t.textContent = 'each gate is a script; the next stage stays closed until it passes';
+  const A = [['queue','worker'],['worker','supervisor'],['supervisor','curator'],['curator','kb'],
+             ['worker','sandbox'],['supervisor','editor'],['editor','report'],['worker','triage'],['triage','bin']];
+  for (const [a, b] of A) {
+    const [ax, ay] = center(a), [bx, by] = center(b);
+    const dx = Math.sign(bx - ax), dy = Math.sign(by - ay);
+    const sx = ax + dx * ST[a][2]/2, sy = ay + dy * ST[a][3]/2, ex = bx - dx * (ST[b][2]/2 + 6), ey = by - dy * (ST[b][3]/2 + 6);
+    mk('path', {class:'arrow', d:`M${sx},${sy} L${ex},${ey}`});
+  }
+  mk('path', {class:'arrow', d:'M570,330 C520,330 520,330 452,330', style:'stroke-dasharray:5 5'});
+  const rl = mk('text', {x:510, y:352, 'text-anchor':'middle', 'font-size':11, fill:'#d64545'}); rl.textContent = 'revise';
+  for (const k in ST) {
+    const [x, y, w, h] = ST[k]; const g = mk('g', {class:'station'});
+    mk('rect', {x, y, width:w, height:h, rx:12}, g);
+    const a = mk('text', {class:'title', x:x + w/2, y:y + 22, 'text-anchor':'middle'}, g); a.textContent = TITLE[k][0];
+    const b = mk('text', {class:'sub', x:x + w/2, y:y + 38, 'text-anchor':'middle'}, g); b.textContent = TITLE[k][1];
+    stationEl[k] = g;
+  }
+  dynLayer = mk('g', {});
+}
+function slot(kind, idx) {
+  const [x, y, w, h] = ST[kind]; const cols = 4, r = 15;
+  const col = idx % cols, row = Math.floor(idx / cols);
+  return [x + 24 + col * 34, y + 62 + row * 34];
+}
+function render(i, animate) {
+  const {st, dec} = stateAt(i); const e = steps[i];
+  Object.values(stationEl).forEach(g => g.setAttribute('class', 'station'));
+  const hot = (k, cls) => stationEl[k] && stationEl[k].setAttribute('class', 'station hot ' + (cls||''));
+  if (e.k === 'session') hot({worker:'worker', supervisor:'supervisor', curator:'curator', editor:'editor'}[e.role],
+                              e.role === 'supervisor' ? (e.verdict === 'accept' ? 'good' : 'bad') : '');
+  if (e.k === 'triage') hot(e.ok ? 'triage' : 'bin', e.ok ? 'good' : 'bad');
+  if (e.k === 'task') hot('queue');
+  // stage bar
+  stageEls.forEach((g, n) => {
+    const s = STAGES[n]; const status = st.stage[s] || (st.active === s ? 'active' : '');
+    g.setAttribute('class', 'stage ' + status);
+    const gate = gateEls[n]; gate.setAttribute('class', 'gate ' + (st.stage[s] === 'done' ? 'ok' : st.stage[s] === 'fail' ? 'no' : ''));
+  });
+  // tokens
+  const occupancy = {}; const want = {};
+  const list = [...Object.values(st.tokens).map(t => ({...t, key:t.id})),
+                ...st.ghosts.map((g, n) => ({id:g.label, key:'ghost' + n, stage:g.stage, at:'queue', ghost:true}))];
+  for (const t of list) {
+    const where = t.at === 'kb' ? 'kb' : t.at;
+    occupancy[where] = occupancy[where] || 0;
+    let pos = slot(where, occupancy[where]++);
+    if (where === 'kb') { const k = list.filter(u => u.at === 'kb' && u.key < t.key).length; pos = [ST.kb[0] + 22 + (k % 4) * 27, ST.kb[1] + 62 + Math.floor(k / 4) * 27]; }
+    want[t.key] = {pos, t};
+  }
+  for (const k in tokenEl) if (!want[k]) { tokenEl[k].remove(); delete tokenEl[k]; }
+  for (const k in want) {
+    const {pos, t} = want[k]; let g = tokenEl[k];
+    if (!g) {
+      g = mk('g', {class:'token' + (t.ghost ? ' ghost' : '')});
+      if (!animate) g.style.transition = 'none';
+      mk('circle', {r:t.at === 'kb' ? 10 : 15, fill:HUE[stageIdx(t.stage)]}, g);
+      const tx = mk('text', {}, g); tx.textContent = t.ghost ? '?' : t.id.replace('t00', '');
+      g.style.transform = `translate(${slot('queue', 0)[0]}px,${slot('queue', 0)[1]}px)`;
+      g.getBoundingClientRect(); tokenEl[k] = g;
+    }
+    g.style.transition = animate ? '' : 'none';
+    g.style.transform = `translate(${pos[0]}px,${pos[1]}px)`;
+    g.firstChild.setAttribute('r', t.at === 'kb' ? 10 : 15);
+    g.lastChild.style.display = t.at === 'kb' ? 'none' : '';
+    g.setAttribute('class', 'token' + (t.ghost ? ' ghost' : ''));
+  }
+  // dynamic decorations (only for the current step)
+  dynLayer.replaceChildren();
+  for (const d of dec) {
+    if (d.t === 'bubble') bubble(d.at, d.kind, d.lines);
+    if (d.t === 'chip') chip(d);
+    if (d.t === 'gate') { const n = STAGES.indexOf(d.stage); const gx = 40 + n * 226 + 204;
+      const b = mk('g', {class:'bubble ' + (d.ok ? 'good' : 'bad') + ' pop'}, dynLayer);
+      mk('rect', {x:gx - 44, y:96, width:96, height:26, rx:8}, b);
+      const tt = mk('text', {x:gx + 4, y:113, 'text-anchor':'middle'}, b); tt.textContent = d.ok ? 'gate PASS' : 'gate FAIL'; }
+    if (d.t === 'triage') {
+      const at = d.ok ? 'triage' : 'bin';
+      bubble(at, d.ok ? 'good' : 'warn', d.lines, true);
+      const c = mk('g', {class:'chip fly'}, dynLayer);
+      mk('rect', {x:ST.triage[0] - 4, y:ST.triage[1] + 44, width:ST.triage[2] + 8, height:24, rx:6}, c);
+      const tt = mk('text', {x:ST.triage[0] + ST.triage[2]/2, y:ST.triage[1] + 60, 'text-anchor':'middle'}, c); tt.textContent = d.text;
+    }
+  }
+  // rejected bin count and KB count badges
+  const badge = (k, txt) => { const [x, y, w] = ST[k]; const t = mk('text', {x:x + w - 10, y:y + 16, 'text-anchor':'end', 'font-size':13, 'font-weight':700, fill:'#6b7488'}, dynLayer); t.textContent = txt; };
+  badge('bin', st.rej.length + ' rejected'); badge('kb', st.kb + ' entries');
+  // caption, counters, banner
+  const [what, why] = caption(e, st);
+  const cap = document.getElementById('caption'); cap.children[0].textContent = what; cap.children[1].textContent = why;
+  const C = st.c; document.getElementById('counters').innerHTML =
+    [['tasks', C.tasks], ['sessions', C.sessions], ['tasks revised', C.revised], ['follow-ups released', C.released],
+     ['follow-ups rejected', C.rejected], ['model tokens', C.tokens.toLocaleString()]]
+     .map(([l, v]) => `<div class="counter"><b>${v}</b>${l}</div>`).join('');
+  const ban = document.getElementById('banner');
+  ban.innerHTML = '';
+  if (e.k === 'end' && D.meta.score) ban.innerHTML = `<div class="card banner good"><b>Scored against the hidden answer:</b> ${D.meta.score}</div>`;
+  if (e.k === 'stop') ban.innerHTML = `<div class="card banner bad"><b>Stopped by a gate.</b> ${e.why}</div>`;
+  document.getElementById('scrub').value = i;
+}
+function bubble(at, kind, lines, above) {
+  const [x, y, w, h] = ST[at]; const bw = 176, bh = 14 + lines.length * 16;
+  const bx = Math.max(6, Math.min(1194 - bw, x + w/2 - bw/2)); const by = above ? y - bh - 6 : (y > 400 ? y - bh - 6 : y + h + 8);
+  const g = mk('g', {class:'bubble ' + kind + ' pop'}, dynLayer);
+  mk('rect', {x:bx, y:by, width:bw, height:bh, rx:8}, g);
+  lines.forEach((ln, n) => { const t = mk('text', {x:bx + 9, y:by + 19 + n * 16}, g); t.textContent = ln; });
+}
+function chip(d) {
+  const [x, y, w] = ST.sandbox; const g = mk('g', {class:'chip fly' + (d.err ? ' err' : ''), style:`animation-delay:${d.i * .25}s`}, dynLayer);
+  mk('rect', {x:x - 40, y:y + 46 + d.i * 24, width:w + 80, height:22, rx:6}, g);
+  const t = mk('text', {x:x + w/2, y:y + 61 + d.i * 24, 'text-anchor':'middle'}, g); t.textContent = d.text;
+}
+
+// ---- ticks & controls -------------------------------------------------------------------
+function buildTicks() {
+  const t = document.getElementById('ticks'); const n = steps.length;
+  t.setAttribute('viewBox', `0 0 ${n * 10} 14`); t.innerHTML = '';
+  steps.forEach((e, i) => {
+    let c = '#c3cbda';
+    if (e.k === 'session') c = e.role === 'supervisor' ? (e.verdict === 'accept' ? '#1a9d5c' : '#d64545') : e.role === 'worker' ? '#2f6fed' : e.role === 'curator' ? '#7a4fd6' : '#e08a1e';
+    if (e.k === 'gate') c = e.ok ? '#1a9d5c' : '#d64545';
+    if (e.k === 'triage') c = e.ok ? '#0e9aa7' : '#e08a1e';
+    const r = document.createElementNS(NS, 'rect');
+    r.setAttribute('x', i * 10 + 1); r.setAttribute('y', 2); r.setAttribute('width', 8); r.setAttribute('height', 10); r.setAttribute('rx', 2); r.setAttribute('fill', c);
+    t.appendChild(r);
+  });
+}
+let cur = 0, timer = null;
+const speedSel = document.getElementById('speed');
+function go(i, animate = true) { cur = Math.max(0, Math.min(steps.length - 1, i)); render(cur, animate); if (cur === steps.length - 1) stop(); }
+function tick() { if (cur >= steps.length - 1) return stop(); go(cur + 1); timer = setTimeout(tick, 1700 / parseFloat(speedSel.value)); }
+function play() { if (cur >= steps.length - 1) go(0, false); document.getElementById('play').textContent = 'Pause'; timer = setTimeout(tick, 300); }
+function stop() { clearTimeout(timer); timer = null; document.getElementById('play').textContent = 'Play'; }
+document.getElementById('play').onclick = () => timer ? stop() : play();
+document.getElementById('next').onclick = () => { stop(); go(cur + 1); };
+document.getElementById('prev').onclick = () => { stop(); go(cur - 1); };
+document.getElementById('scrub').oninput = ev => { stop(); go(+ev.target.value, false); };
+document.addEventListener('keydown', ev => {
+  if (ev.code === 'Space') { ev.preventDefault(); document.getElementById('play').click(); }
+  if (ev.code === 'ArrowRight') document.getElementById('next').click();
+  if (ev.code === 'ArrowLeft') document.getElementById('prev').click();
+});
+
+document.getElementById('meta').textContent = D.meta.line;
+document.getElementById('scrub').max = steps.length - 1;
+build(); buildTicks();
+const hash = new URLSearchParams(location.hash.slice(1));
+if (hash.has('step')) go(+hash.get('step'), false);
+else { go(0, false); if (!matchMedia('(prefers-reduced-motion: reduce)').matches) setTimeout(play, 700); }
+</script>
+</body>
+</html>
