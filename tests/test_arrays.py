@@ -91,3 +91,62 @@ def test_paper_anchor_sequence_is_found():
     call = kmer_scan("L0050", flank, random.Random(4))
     assert call.status == "array"
     assert pytest.approx(call.R, abs=2) == 14
+
+
+# ---------------------------------------------------------------------------
+# Paper Methods p.32 delimitation rules (raw-fidelity audit 2026-09-29):
+# "Chains whose spacings were all multiples of three and whose copies lay
+# within an annotated gene were set aside as coding repeats. An array was
+# called adjacent to the RT when no annotated gene of 300 nt or more lay
+# between its last copy and the RT."
+# ---------------------------------------------------------------------------
+
+def _planted_mod3_upstream(copies: int = 5, spacing: int = 60) -> str:
+    rng = random.Random(7)
+    parts = []
+    for _ in range(copies):
+        parts.append("ACGTACGTTA")
+        parts.append("".join(rng.choice("AT") for _ in range(spacing - 10)))
+    return "".join(parts)
+
+
+def _fast_delimit(locus: str, upstream: str, **kwargs):
+    orig = (arrays.N_SHUFFLES_DELIMIT, arrays.N_SHUFFLES_DELIMIT_RETEST)
+    arrays.N_SHUFFLES_DELIMIT, arrays.N_SHUFFLES_DELIMIT_RETEST = 4, 8
+    try:
+        return delimit_array(locus, upstream, random.Random(7), **kwargs)
+    finally:
+        arrays.N_SHUFFLES_DELIMIT, arrays.N_SHUFFLES_DELIMIT_RETEST = orig
+
+
+def test_coding_repeat_rule_flags_all_mod3_chain_inside_gene():
+    up = _planted_mod3_upstream()  # spacing 60 -> all multiples of 3
+    arr = _fast_delimit("L_x", up)
+    assert arr is not None
+    # no annotation -> flags stay neutral
+    assert arr.coding_repeat is False
+    assert arr.rt_adjacent is None
+    # gene covering every copy -> set aside as coding repeat
+    covering = [(0, len(up))]
+    arr2 = _fast_delimit("L_x", up, gene_spans=covering)
+    assert arr2 is not None and arr2.coding_repeat is True
+    # gene NOT covering the copies -> not a coding repeat
+    off_target = [(len(up) - 5, len(up) + 50)]
+    arr3 = _fast_delimit("L_x", up, gene_spans=off_target)
+    assert arr3 is not None and arr3.coding_repeat is False
+
+
+def test_rt_adjacency_rule_requires_no_300nt_gene_in_gap():
+    up = _planted_mod3_upstream()
+    rt = len(up) + 500  # RT 500 nt downstream of the window
+    # a >=300-nt annotated gene in the gap -> NOT adjacent
+    big_gene = [(len(up) + 50, len(up) + 400)]  # 350 nt
+    arr = _fast_delimit("L_x", up, gene_spans=big_gene, rt_offset=rt)
+    assert arr is not None and arr.rt_adjacent is False
+    # only short genes in the gap -> adjacent
+    small_gene = [(len(up) + 50, len(up) + 200)]  # 150 nt
+    arr2 = _fast_delimit("L_x", up, gene_spans=small_gene, rt_offset=rt)
+    assert arr2 is not None and arr2.rt_adjacent is True
+    # empty annotation but gene list given -> no gene between -> adjacent
+    arr3 = _fast_delimit("L_x", up, gene_spans=[], rt_offset=rt)
+    assert arr3 is not None and arr3.rt_adjacent is True

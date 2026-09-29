@@ -40,6 +40,9 @@ MIN_UPSTREAM_FOR_ASSESSMENT = 1_500
 MAX_UPSTREAM_SCAN = 3_000
 MAX_UPSTREAM_DELIMIT = 6_000
 SEED_LEN_DELIMIT = 10
+# paper Methods p.32: an array is adjacent to the RT when "no annotated
+# gene of 300 nt or more lay between its last copy and the RT"
+RT_ADJACENCY_GENE_MIN_NT = 300
 DELIMIT_MISMATCHES = 1
 DELIMIT_SPACING = (60, 600)
 SPACING_TOLERANCE = 0.30
@@ -261,6 +264,13 @@ class DelimitedArray:
     block_offset: int = 0  # start of the conserved block within a copy
     # (grok round-2: PWM consumers must slice copy_start+block_offset, else they
     # align the seed prefix when s > 0)
+    # paper Methods p.32: chains with all spacings multiples of 3 whose copies
+    # lie within an annotated gene are "set aside as coding repeats"
+    coding_repeat: bool = False
+    # paper Methods p.32: adjacent to the RT when no annotated gene of
+    # RT_ADJACENCY_GENE_MIN_NT nt or more lies between the last copy and the
+    # RT; None = no gene annotation was supplied (rule not assessable)
+    rt_adjacent: bool | None = None
 
 
 def _information_content(columns: list[str], background: dict[str, float]) -> float:
@@ -394,10 +404,25 @@ def _chain_score(window: str, chain: list[int], seed_len: int) -> tuple[float, s
         for col in zip(*columns, strict=False))
 
 
-def delimit_array(locus: str, upstream: str, rng: random.Random) -> DelimitedArray | None:
+def delimit_array(
+    locus: str,
+    upstream: str,
+    rng: random.Random,
+    gene_spans: list[tuple[int, int]] | None = None,
+    rt_offset: int | None = None,
+) -> DelimitedArray | None:
     """Paper step 2. Tests every recurring 10-nt word as seed; retains the longest
     near-constant-spaced chain whose score beats the best chain in 200 (or 2,000 on
-    weak margins) 50-nt-block shuffles, in both 3,000- and 6,000-nt windows."""
+    weak margins) 50-nt-block shuffles, in both 3,000- and 6,000-nt windows.
+
+    gene_spans: annotated gene (start, end) coordinates in the SAME frame as the
+    returned copy_starts (i.e. positions in the upstream window, not genomic
+    coordinates — the caller maps them). When given, both paper Methods p.32
+    delimitation rules are applied: all-modulo-3 chains inside one annotated gene
+    are flagged coding_repeat, and rt_adjacent reports whether any annotated gene
+    of RT_ADJACENCY_GENE_MIN_NT nt or more lies between the last copy and the RT
+    (rt_offset defaults to the end of the window — the RT immediately follows the
+    supplied upstream). Without gene_spans both stay neutral (False / None)."""
     window6 = upstream[-MAX_UPSTREAM_DELIMIT:].upper() if len(upstream) > MAX_UPSTREAM_DELIMIT \
         else upstream.upper()
     window3 = window6[-MAX_UPSTREAM_SCAN:]
@@ -453,9 +478,27 @@ def delimit_array(locus: str, upstream: str, rng: random.Random) -> DelimitedArr
     copies_seqs = [window6[p:p + SEED_LEN_DELIMIT] for p in chain]
     blk_s, _, repeat = _consensus_block(copies_seqs)
     spacings = [b - a for a, b in zip(chain, chain[1:], strict=False)]
+    # paper Methods p.32, rule 1: "Chains whose spacings were all multiples of
+    # three and whose copies lay within an annotated gene were set aside as
+    # coding repeats" — flagged here; callers filter coding repeats out of the
+    # array set (the paper sets them aside, it does not drop the data).
+    coding_repeat = bool(gene_spans) and all(s % 3 == 0 for s in spacings) and any(
+        a <= chain[0] and chain[-1] + SEED_LEN_DELIMIT <= b for a, b in gene_spans
+    )
+    # paper Methods p.32, rule 2: "An array was called adjacent to the RT when
+    # no annotated gene of 300 nt or more lay between its last copy and the RT."
+    rt_adjacent = None
+    if gene_spans is not None:
+        rt_pos = len(window6) if rt_offset is None else rt_offset
+        last_copy_end = chain[-1] + SEED_LEN_DELIMIT
+        rt_adjacent = not any(
+            b - a >= RT_ADJACENCY_GENE_MIN_NT and a < rt_pos and b > last_copy_end
+            for a, b in gene_spans
+        )
     return DelimitedArray(locus=locus, copy_starts=chain, repeat=repeat,
                           score=score, shuffles_used=shuffles_used,
-                          spacings=spacings, block_offset=blk_s)
+                          spacings=spacings, block_offset=blk_s,
+                          coding_repeat=coding_repeat, rt_adjacent=rt_adjacent)
 
 
 # --------------------------------------------------------------------------
