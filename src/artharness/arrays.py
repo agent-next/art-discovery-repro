@@ -609,8 +609,13 @@ def pwm_extend(array: DelimitedArray, upstream: str, rng: random.Random,
     if gene_spans is not None:
         coding_repeat, rt_adjacent = _delimitation_flags(
             merged, spacings, len(window), gene_spans, rt_offset)
-    elif merged[-1] > starts[-1]:
-        coding_repeat, rt_adjacent = False, None  # stale, unverifiable
+    elif extra:
+        # ANY extension changes spacings: interstitial copies can break the
+        # all-mod-3 / single-gene coverage, so coding_repeat is unverifiable
+        # (devin re-review N2 — guarding only on a moved last copy kept a
+        # stale True). rt_adjacent survives when the last copy did not move.
+        coding_repeat = False
+        rt_adjacent = None if merged[-1] > starts[-1] else array.rt_adjacent
     else:
         coding_repeat, rt_adjacent = array.coding_repeat, array.rt_adjacent
     return DelimitedArray(locus=array.locus, copy_starts=merged, repeat=array.repeat,

@@ -101,16 +101,17 @@ guides' titles/contents were never published (GAP-2).
   would need ≥2 TB RAM or a carefully partitioned disk-backed run).
 
 - **GAP-5 Delimitation tail (PWM copy-extension step).** RESOLVED 2026-09-24:
+  `pwm_extend` (log-odds PWM; copies = matches above the max of 200 block-shuffled
+  regions) and `cross_scan` (every array's PWM scanned against every other locus to
+  group arrays sharing a repeat) implemented and tested
+  (`tests/test_arrays_pwm.py`). Pseudocount value NOT-IN-PAPER (1e-3 default).
+
 - **GAP-9 Delimitation rule plumbing (2026-09-29).** Both p.32 rules are
   implemented in `delimit_array` (coding_repeat flag; rt_adjacent rule with
   RT_ADJACENCY_GENE_MIN_NT=300) but take `gene_spans` in window coordinates —
   no caller supplies gene annotation yet, so live scans run with the flags
   neutral (False/None). Wiring needs an annotation source mapped into window
   coordinates (subset DB proteins table is the natural origin).
-  `pwm_extend` (log-odds PWM; copies = matches above the max of 200 block-shuffled
-  regions) and `cross_scan` (every array's PWM scanned against every other locus to
-  group arrays sharing a repeat) implemented and tested
-  (`tests/test_arrays_pwm.py`). Pseudocount value NOT-IN-PAPER (1e-3 default).
 
 - **GAP-6 Wet lab.**
   WHY: no laboratory; protocols require BSL-1/2 work, Illumina run, cloning.

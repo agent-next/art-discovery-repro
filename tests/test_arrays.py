@@ -152,13 +152,6 @@ def test_rt_adjacency_rule_requires_no_300nt_gene_in_gap():
     assert arr3 is not None and arr3.rt_adjacent is True
 
 
-def _flagged_array(coding: bool, adjacent) -> "arrays.DelimitedArray":
-    return arrays.DelimitedArray(
-        locus="L_f", copy_starts=[0, 60, 120, 180], repeat="ACGTACGTTA",
-        score=100.0, shuffles_used=200, spacings=[60, 60, 60],
-        block_offset=0, coding_repeat=coding, rt_adjacent=adjacent)
-
-
 def _extendable_upstream() -> str:
     # 4 near-constant copies (60-nt step), a 200-nt gap (not near-constant ->
     # the delimit chain stops at 4), then 2 more repeat copies the PWM
@@ -196,10 +189,27 @@ def test_pwm_extend_marks_flags_stale_when_annotation_absent():
     arr = _fast_delimit("L_f", up)
     assert arr is not None and arr.rt_adjacent is None  # no annotation in
     ext = arrays.pwm_extend(arr, up, random.Random(7))
-    if len(ext.copy_starts) > len(arr.copy_starts):
-        # copies were added beyond the old last copy -> old flags would be
-        # stale; without annotation they are unverifiable, not silently kept
-        assert ext.rt_adjacent is None
+    assert len(ext.copy_starts) > len(arr.copy_starts)  # extension happened
+    # copies were added beyond the old last copy -> old flags would be stale;
+    # without annotation they are unverifiable, not silently kept
+    assert ext.rt_adjacent is None
+
+
+def test_pwm_extend_interstitial_extension_still_resets_coding_flag():
+    # devin re-review N2: a copy inserted BETWEEN existing ones changes the
+    # spacings (mod-3 / gene coverage may break) even though the last copy
+    # never moves — coding_repeat must reset, rt_adjacent must survive.
+    up = ("ACGTACGTTA" + "AT" * 5) * 10  # copies every 20 nt (unchainable:
+    # spacing < 60, so only pwm_extend sees them all)
+    arr = arrays.DelimitedArray(
+        locus="L_n2", copy_starts=[0, 60, 120, 180], repeat="ACGTACGTTA",
+        score=100.0, shuffles_used=200, spacings=[60, 60, 60], block_offset=0,
+        coding_repeat=True, rt_adjacent=True)
+    ext = arrays.pwm_extend(arr, up, random.Random(7))
+    assert len(ext.copy_starts) > 4  # interstitial copies picked up
+    assert ext.copy_starts[-1] == 180  # last copy unchanged
+    assert ext.coding_repeat is False  # spacings changed -> unverifiable
+    assert ext.rt_adjacent is True  # last copy unmoved -> still valid
 
 
 def test_rt_adjacency_gene_containing_last_copy_does_not_block():
