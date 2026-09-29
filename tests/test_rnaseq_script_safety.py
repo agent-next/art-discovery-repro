@@ -66,10 +66,16 @@ def test_keep_intermediates_zero_deletes_only_this_librarys_scratch(tmp_path: Pa
     env = {"PATH": "/usr/bin:/bin", "KEEP_INTERMEDIATES": "0", "OUTDIR": "out"}
     out = subprocess.run(["bash", str(SCRIPT), "--dry-run", str(accs)],
                          capture_output=True, text=True, env=env).stdout
-    rm = [ln for ln in out.splitlines() if ln.startswith("rm -rf")]
-    assert len(rm) == 1
-    assert "out/bam/SRR19152328.bam" in rm[0] and "out/trim/SRR19152328_1.fq.gz" in rm[0]
-    assert "sorted.bam" not in rm[0]
+    lines = out.splitlines()
+    rm = [ln for ln in lines if ln.startswith("rm -rf")]
+    assert len(rm) == 2
+    # plain FASTQ goes as soon as fastp has read it, before the aligner runs
+    raw_at = lines.index(rm[0])
+    assert "out/fastq/SRR19152328_1.fastq" in rm[0]
+    assert any(ln.startswith("fastp") for ln in lines[:raw_at])
+    assert not any("bowtie2 --very-sensitive" in ln for ln in lines[:raw_at])
+    assert "out/bam/SRR19152328.bam" in rm[1] and "out/trim/SRR19152328_1.fq.gz" in rm[1]
+    assert not any("sorted.bam" in r for r in rm)
     keep = subprocess.run(["bash", str(SCRIPT), "--dry-run", str(accs)], capture_output=True,
                           text=True, env={**env, "KEEP_INTERMEDIATES": "1"}).stdout
     assert "rm -rf" not in keep

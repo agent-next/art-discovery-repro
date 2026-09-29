@@ -135,6 +135,9 @@ while IFS= read -r acc; do
     run fastp --length_required 30 --thread "$THREADS" \
         -i "$r1" -I "$r2" \
         -o "$OUT/trim/${acc}_1.fq.gz" -O "$OUT/trim/${acc}_2.fq.gz"
+    if [[ "${KEEP_INTERMEDIATES:-1}" == 0 ]]; then
+        run rm -rf "$OUT/fastq/${acc}" "$r1" "$r2"  # ~10 GB of plain FASTQ per library
+    fi
     # paper: Bowtie2 --very-sensitive -X 1000 --no-unal vs SA1 + host
     # paper: "Properly paired alignments with MAPQ of at least 10 and a template
     # of at most 1,500 nt were retained as fragments." Flags verified against the
@@ -149,9 +152,7 @@ while IFS= read -r acc; do
         "$OUT/trim/${acc}_2.fq.gz" "$OUT/bam/${acc}.bam"
     run samtools sort -o "$OUT/bam/${acc}.sorted.bam" -@ "$THREADS" "$OUT/bam/${acc}.bam"
     if [[ "${KEEP_INTERMEDIATES:-1}" == 0 ]]; then
-        run rm -rf "$OUT/fastq/${acc}" "$r1" "$r2" \
-            "$OUT/trim/${acc}_1.fq.gz" "$OUT/trim/${acc}_2.fq.gz" \
-            "$OUT/bam/${acc}.bam"
+        run rm -rf "$OUT/trim/${acc}_1.fq.gz" "$OUT/trim/${acc}_2.fq.gz" "$OUT/bam/${acc}.bam"
     fi
 done < <(acc_stream)
 
