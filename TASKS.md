@@ -11,6 +11,7 @@ real blocker is hit; every blocker has a WHY/HOW/WHAT entry in REPRODUCTION.md Â
 - [x] `docs/paper-notes.md`, `REPRODUCTION.md`, `brief/research_brief.md` (6-anchor reconstruction)
 - [x] Five-round independent review; v0.1.0 tagged; repo renamed `art-discovery-repro`
 - [x] Threaded dispatch (`dispatch_concurrency`, capped at 58) with locked shared state
+- [x] Family definition: longest-contig cluster representatives; seed BLASTP now searches a GenBank BLAST db (the paper's pool never contained the BLASTP hits)
 - [x] Stage gates evaluate after each stage's work; follow-up dedupe; eval removed from pipeline wrappers
 
 ## Open
@@ -19,8 +20,6 @@ real blocker is hit; every blocker has a WHY/HOW/WHAT entry in REPRODUCTION.md Â
       census subset, RNA-seq reanalysis (PRJNA836150) and record receipts under `task-runs/`
 - [ ] Live pilot: 1â€“2 tasks through the stage chain + L1 benchmark with a token cap
       (owner decision: budget, model = Fable 5 in place of Mythos 5)
-- [ ] Contig-length-aware cluster representative in `family_definition.sh` (GAP in script header)
-- [ ] Wire the GenBank BLASTP branch into the ART pool (output currently unused)
 - [ ] Rename the local checkout directory `art-harness` â†’ `art-discovery-repro` from a fresh session
 - [ ] Owner closeout report (goal-html-report)
 
