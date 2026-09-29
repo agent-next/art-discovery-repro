@@ -25,6 +25,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+from dataclasses import dataclass
 from pathlib import Path
 
 DNA_RUN = re.compile(r"[ACGTacgt]{200,}")  # paper: contiguous DNA string of >=200 nt
@@ -60,6 +61,38 @@ def load_identifiers(path: Path) -> set[str]:
     return {line.strip() for line in path.read_text().splitlines() if line.strip()}
 
 
+# paper Methods p.38: 130 RT ids, 171 contig ids
+PAPER_IDENTIFIER_COUNTS = {"rt_ids": 130, "contig_ids": 171}
+
+
+@dataclass(frozen=True)
+class IdentifierSets:
+    """The paper's TWO identifier sets (Methods p.38: 130 RT ids, 171 contig
+    ids) — kept distinct because only sessions naming a CONTIG are parsed
+    event-by-event; a flat set cannot express that."""
+
+    rt_ids: frozenset[str]
+    contig_ids: frozenset[str]
+
+    @property
+    def paper_counts(self) -> dict[str, int]:
+        return dict(PAPER_IDENTIFIER_COUNTS)  # paper p.38
+
+    @property
+    def all(self) -> frozenset[str]:
+        return self.rt_ids | self.contig_ids
+
+    def contig_named(self, named: set[str]) -> set[str]:
+        """Which of the identifiers a session named are CONTIG ids."""
+        return {n for n in named if n in self.contig_ids}
+
+
+def load_identifier_sets(rt_path: Path, contig_path: Path) -> IdentifierSets:
+    return IdentifierSets(
+        rt_ids=frozenset(load_identifiers(rt_path)),
+        contig_ids=frozenset(load_identifiers(contig_path)))
+
+
 def scan_records(records_root: Path, ids: set[str]) -> dict[str, list[str]]:
     """task id -> identifiers mentioned anywhere in its record files."""
     hits: dict[str, list[str]] = {}
@@ -74,7 +107,8 @@ def scan_records(records_root: Path, ids: set[str]) -> dict[str, list[str]]:
     return hits
 
 
-def scan_transcripts(transcripts_root: Path, ids: set[str]) -> list[dict]:
+def scan_transcripts(transcripts_root: Path, ids: set[str],
+                     contig_ids: set[str] | None = None) -> list[dict]:
     """Per transcript naming an identifier: ordered event walk — a repeat remark
     counts as 'downstream of DNA retrieval' only when a >=200-nt DNA run appeared
     earlier in the transcript (paper p.38; grok round-2 finding 9). Identifiers
@@ -88,6 +122,19 @@ def scan_transcripts(transcripts_root: Path, ids: set[str]) -> list[dict]:
         named = sorted(i for i in ids
                        if re.search(rf"\b{re.escape(i)}\b", "\n".join(lines)))
         if not named:
+            continue
+        # paper p.38: only sessions naming a CONTIG are parsed event-by-event;
+        # when contig_ids is supplied, others are recorded gated, un-walked
+        if contig_ids is not None and not (set(named) & contig_ids):
+            out.append({
+                "transcript": str(tf),
+                "identifiers": named,
+                "gate": "no_contig_named",
+                "dna_runs_ge200nt": 0,
+                "repeat_remarks": 0,
+                "repeat_remarks_after_dna": 0,
+                "repeat_remark_samples": [],
+            })
             continue
         dna_seen_at: list[int] = []
         repeat_remarks = 0
@@ -114,6 +161,7 @@ def scan_transcripts(transcripts_root: Path, ids: set[str]) -> list[dict]:
         out.append({
             "transcript": str(tf),
             "identifiers": named,
+            "gate": "contig_named" if contig_ids is not None else "all",
             "dna_runs_ge200nt": len(dna_seen_at),
             "repeat_remarks": repeat_remarks,
             "repeat_remarks_after_dna": remark_after_dna,

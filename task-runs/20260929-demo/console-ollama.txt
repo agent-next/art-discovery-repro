@@ -1,0 +1,65 @@
+ART harness demo | agents: small model qwen3:0.6b via Ollama | world: 9 synthetic contigs, planted answer kept out of the tools
+Five gated stages; each task = worker -> supervisor (-> revise) -> curator.
+
+  task t0001 [1_input_assembly] (seed): Stage 1 - input assembly. Inventory the input contigs: how many and how long.
+    worker     t0001   3.6s 1318->331 tok  tools: list_contigs -> contigs=9 total_nt=45440; proposes 1 follow-up(s)
+      why: worker = the agent that proposes a plan and executes it, then submits a written summary with its files (paper p.28).
+  TRIAGE from t0001: REJECTED - the follow-up names no locus, so there is nothing concrete to run  [HEADLINE: widgets=3 sprockets=1]
+      why: triage = follow-up tasks proposed by agents queue here; the harness releases each or rejects it with a written reason (10 rejections in the paper).
+    supervisor t0001   0.1s 514->6 tok     VERDICT: accept
+      why: supervisor = a second agent that reviews plan, summary and files and either accepts or returns them for revision; 49 of the paper's 119 tasks were revised at least once.
+    curator    t0001   0.1s 355->66 tok    entered findings into the knowledge base
+      why: curator = after each accepted task it enters the findings into a shared knowledge base that later workers and supervisors read (paper p.28).
+  GATE 1_input_assembly: PASS
+      why: gate = a SCRIPTED completion check that closes a stage. No task of a later stage opens before it passes; the check is code, not a model's opinion (paper p.28).
+  task t0002 [2_database_sweep] (seed): Stage 2 - database sweep. Search all six reading frames of every contig for open reading frames 
+    worker     t0002   0.2s 1679->111 tok  tools: find_rt_orfs -> rt_orfs=9 contigs_with_rt=9
+    supervisor t0002   0.1s 486->35 tok    VERDICT: revise -- - the summary must quote the tool result verbatim; missing line: HEADLINE: rt_orfs=9 contigs_with_rt=9
+      why: revision = the supervisor's 'no'. The worker must pass the completion check again; after 10 revisions a task stalls in the paper (3 here).
+    worker     t0002   0.1s 1034->49 tok   tools: find_rt_orfs -> rt_orfs=9 contigs_with_rt=9
+    supervisor t0002   0.1s 462->9 tok     VERDICT: accept
+    curator    t0002   0.1s 182->32 tok    entered findings into the knowledge base
+  GATE 2_database_sweep: PASS
+  task t0003 [3_rt_classification] (seed): Stage 3 - RT classification. Give every RT candidate a class and set fragments (under 250 aa) as
+    worker     t0003   0.4s 1799->275 tok  tools: classify_rt -> classified=9 fragments=1 classes=A:2,B:4,C:2,fragment:1
+    supervisor t0003   0.1s 781->48 tok    VERDICT: revise -- - the summary must quote the tool result verbatim; missing line: HEADLINE: classified=9 fragments=1 classes=A:
+    worker     t0003   0.1s 1011->52 tok   tools: classify_rt -> classified=9 fragments=1 classes=A:2,B:4,C:2,fragment:1
+    supervisor t0003   0.1s 652->9 tok     VERDICT: accept
+    curator    t0003   0.1s 181->33 tok    entered findings into the knowledge base
+  GATE 3_rt_classification: PASS
+  task t0004 [4_neighborhood_census] (seed): Stage 4 - neighborhood census. Scan the window upstream of every full-length RT for a tandem rep
+    worker     t0004  10.8s 2129->219 tok  tools: scan_arrays -> assessed=8 arrays=4 no_array=3 not_assessed=1; proposes 1 follow-up(s)
+  TRIAGE from t0004: REJECTED - the follow-up names no locus, so there is nothing concrete to run  [HEADLINE: widgets=3 sprockets=1]
+    supervisor t0004   0.1s 830->32 tok    VERDICT: revise -- - the summary must quote the tool result verbatim; missing line: HEADLINE: assessed=8 arrays=4 no_array=3 not_
+    worker     t0004   0.3s 1199->162 tok  tools: scan_arrays -> assessed=8 arrays=4 no_array=3 not_assessed=1; proposes 1 follow-up(s)
+  TRIAGE from t0004: released  [Deep dive locus L01 (array, R=7) using deep_dive locus=L01]
+    supervisor t0004   0.1s 858->6 tok     VERDICT: accept
+    curator    t0004   0.1s 311->63 tok    entered findings into the knowledge base
+  task t0005 [4_neighborhood_census] (follow_up of t0004): Deep dive locus L01 (array, R=7) using deep_dive locus=L01
+    worker     t0005   2.8s 1524->282 tok  tools: deep_dive -> deep_dives=1 delimited=1 loci=L01; proposes 1 follow-up(s)
+  TRIAGE from t0005: REJECTED - the follow-up names no locus, so there is nothing concrete to run  [<no follow-up>]
+    supervisor t0005   0.1s 640->6 tok     VERDICT: revise -- - the summary must quote the tool result verbatim; missing line: HEADLINE: deep_dives=1 delimited=1 loci=L01
+    worker     t0005   0.1s 777->56 tok    tools: deep_dive -> deep_dives=1 delimited=1 loci=L01
+    supervisor t0005   0.1s 536->6 tok     VERDICT: accept
+    curator    t0005   0.1s 174->39 tok    entered findings into the knowledge base
+  GATE 4_neighborhood_census: PASS
+  task t0006 [5_deep_dives] (seed): Stage 5 - deep dives. Make sure every array-positive locus has a deep dive; run one for any that
+    worker     t0006  54.1s 3086->1400 tok tools: deep_dive -> deep_dives=3 delimited=3 loci=L02,L03,L09
+    supervisor t0006   0.3s 2301->96 tok   VERDICT: revise -- - the summary must quote the tool result verbatim; missing line: HEADLINE: deep_dives=3 delimited=3 loci=L02,L
+    worker     t0006   0.5s 1450->261 tok  tools: deep_dive -> deep_dives=3 delimited=3 loci=L02,L03,L09; proposes 1 follow-up(s)
+  TRIAGE from t0006: REJECTED - the follow-up names no locus, so there is nothing concrete to run  [<no such line>]
+    supervisor t0006   0.1s 1792->6 tok    VERDICT: revise -- - numbers stated without support in any tool output: 100
+    worker     t0006   0.2s 1291->52 tok   tools: deep_dive -> deep_dives=3 delimited=3 loci=L02,L03,L09
+    supervisor t0006   0.1s 1569->6 tok    VERDICT: accept
+    curator    t0006   0.1s 182->32 tok    entered findings into the knowledge base
+  GATE 5_deep_dives: PASS
+
+Report: draft from the shared tables, then the editor decides.
+    editor     t0006   0.0s 427->4 tok     FILE: yes
+      why: editor = reviews a report before it is filed; the paper used 52 editor sessions for 19 reports.
+  report FILED at campaign/records/t0006/report.md
+
+tasks_total=6 completed=6 rejected_at_triage=4 stalled=0
+revised>=1: 5  follow_ups_opened: 1  reports_filed: 1
+Scorecard vs hidden truth: 4/4 planted arrays found, 0 false calls, decoys handled 5/5
+Walkthrough: /tmp/dm/final-ollama/WALKTHROUGH.md

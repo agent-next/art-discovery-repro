@@ -27,6 +27,13 @@ run or real-data pipeline run has been executed yet: those are budget/compute-ga
 `REPRODUCTION.md` maps every paper element to its component and state and lists the
 unreproducible gaps; `TASKS.md` holds the open work.
 
+## Try it: running demo
+
+`make demo` runs the whole workflow (5 gated stages, worker/supervisor/curator, triage,
+editor, git-versioned records) on a toy genome world in about a minute, offline, and
+writes an explained `demo-run/WALKTHROUGH.md`. `make demo-model` does the same with a
+small local model (Ollama, `qwen3:0.6b`). See `docs/DEMO.md`.
+
 ## Safety gates
 
 - The LLM session backend is pluggable (`src/artharness/runner/`). Tests run fully offline

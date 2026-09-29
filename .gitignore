@@ -12,3 +12,4 @@ task-runs/*/work/
 *.mmseqs2/
 .claude/
 .mcp.json
+demo-run/

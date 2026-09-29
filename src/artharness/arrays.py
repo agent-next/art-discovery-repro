@@ -40,6 +40,9 @@ MIN_UPSTREAM_FOR_ASSESSMENT = 1_500
 MAX_UPSTREAM_SCAN = 3_000
 MAX_UPSTREAM_DELIMIT = 6_000
 SEED_LEN_DELIMIT = 10
+# paper Methods p.32: an array is adjacent to the RT when "no annotated
+# gene of 300 nt or more lay between its last copy and the RT"
+RT_ADJACENCY_GENE_MIN_NT = 300
 DELIMIT_MISMATCHES = 1
 DELIMIT_SPACING = (60, 600)
 SPACING_TOLERANCE = 0.30
@@ -261,6 +264,13 @@ class DelimitedArray:
     block_offset: int = 0  # start of the conserved block within a copy
     # (grok round-2: PWM consumers must slice copy_start+block_offset, else they
     # align the seed prefix when s > 0)
+    # paper Methods p.32: chains with all spacings multiples of 3 whose copies
+    # lie within an annotated gene are "set aside as coding repeats"
+    coding_repeat: bool = False
+    # paper Methods p.32: adjacent to the RT when no annotated gene of
+    # RT_ADJACENCY_GENE_MIN_NT nt or more lies between the last copy and the
+    # RT; None = no gene annotation was supplied (rule not assessable)
+    rt_adjacent: bool | None = None
 
 
 def _information_content(columns: list[str], background: dict[str, float]) -> float:
@@ -291,7 +301,10 @@ def _consensus_block(copies_seqs: list[str]) -> tuple[int, int, str]:
     cons = []
     for i in range(width):
         col = [s[i] for s in copies_seqs]
-        base = max(set(col), key=col.count)
+        # sorted() fixes tie order: max() keeps the first maximal
+        # element, so modal-count ties resolve alphabetically, never by
+        # set iteration order (PYTHONHASHSEED-dependent; audit finding 2)
+        base = max(sorted(set(col)), key=col.count)
         cons.append((base, col.count(base) / len(col)))
     blocks: list[tuple[int, int]] = []
     start = None
@@ -300,9 +313,11 @@ def _consensus_block(copies_seqs: list[str]) -> tuple[int, int, str]:
         if frac >= CONSENSUS_FRACTION:
             if start is None:
                 start = i
-            lapses = 0
+            # Paper p.32: "with one lapse tolerated" — ONE lapse per block
+            # (a total budget), NOT per run of passing columns: a passing
+            # column between two failures must not reset it.
         elif start is not None and lapses == 0:
-            lapses += 1  # one lapse tolerated
+            lapses += 1  # the one tolerated lapse
         else:
             if start is not None:
                 blocks.append((start, i))  # end exclusive: the second failing
@@ -310,6 +325,9 @@ def _consensus_block(copies_seqs: list[str]) -> tuple[int, int, str]:
             start = None
             lapses = 0
     if start is not None:
+        # NOT-IN-PAPER: whether a block whose LAST column is the tolerated
+        # lapse (no second failure follows) includes that trailing lapse
+        # column — the paper's wording does not settle it; included here.
         blocks.append((start, len(cons)))
     if not blocks:
         return 0, 0, ""
@@ -382,13 +400,62 @@ def _chain_score(window: str, chain: list[int], seed_len: int) -> tuple[float, s
     columns = [seq[s:e] for seq in copies_seqs]
     ic = _information_content(columns, background)
     return (len(chain) - 1) * ic, "".join(
-        max(set(col), key=col.count) for col in zip(*columns, strict=False))
+        max(sorted(set(col)), key=col.count)
+        for col in zip(*columns, strict=False))
 
 
-def delimit_array(locus: str, upstream: str, rng: random.Random) -> DelimitedArray | None:
+def _delimitation_flags(
+    chain: list[int],
+    spacings: list[int],
+    window_len: int,
+    gene_spans: list[tuple[int, int]] | None,
+    rt_offset: int | None,
+) -> tuple[bool, bool | None]:
+    """Both paper Methods p.32 delimitation rules for one chain.
+
+    rule 1: "Chains whose spacings were all multiples of three and whose
+    copies lay within an annotated gene were set aside as coding repeats."
+    rule 2: "An array was called adjacent to the RT when no annotated gene of
+    300 nt or more lay between its last copy and the RT."
+    INTERPRETED (F3, devin review PR#18): "lay between" = the gene lies fully
+    inside the open gap (start >= last copy end, end <= RT position); a gene
+    containing the last copy or crossing the RT is not "between". Spans are
+    half-open [a, b) in window coordinates.
+    """
+    coding_repeat = bool(gene_spans) and all(s % 3 == 0 for s in spacings) and any(
+        a <= chain[0] and chain[-1] + SEED_LEN_DELIMIT <= b for a, b in gene_spans
+    )
+    rt_adjacent = None
+    if gene_spans is not None:
+        rt_pos = window_len if rt_offset is None else rt_offset
+        last_copy_end = chain[-1] + SEED_LEN_DELIMIT
+        rt_adjacent = not any(
+            b - a >= RT_ADJACENCY_GENE_MIN_NT
+            and a >= last_copy_end and b <= rt_pos
+            for a, b in gene_spans
+        )
+    return coding_repeat, rt_adjacent
+
+
+def delimit_array(
+    locus: str,
+    upstream: str,
+    rng: random.Random,
+    gene_spans: list[tuple[int, int]] | None = None,
+    rt_offset: int | None = None,
+) -> DelimitedArray | None:
     """Paper step 2. Tests every recurring 10-nt word as seed; retains the longest
     near-constant-spaced chain whose score beats the best chain in 200 (or 2,000 on
-    weak margins) 50-nt-block shuffles, in both 3,000- and 6,000-nt windows."""
+    weak margins) 50-nt-block shuffles, in both 3,000- and 6,000-nt windows.
+
+    gene_spans: annotated gene (start, end) coordinates in the SAME frame as the
+    returned copy_starts (i.e. positions in the upstream window, not genomic
+    coordinates — the caller maps them). When given, both paper Methods p.32
+    delimitation rules are applied: all-modulo-3 chains inside one annotated gene
+    are flagged coding_repeat, and rt_adjacent reports whether any annotated gene
+    of RT_ADJACENCY_GENE_MIN_NT nt or more lies between the last copy and the RT
+    (rt_offset defaults to the end of the window — the RT immediately follows the
+    supplied upstream). Without gene_spans both stay neutral (False / None)."""
     window6 = upstream[-MAX_UPSTREAM_DELIMIT:].upper() if len(upstream) > MAX_UPSTREAM_DELIMIT \
         else upstream.upper()
     window3 = window6[-MAX_UPSTREAM_SCAN:]
@@ -444,9 +511,12 @@ def delimit_array(locus: str, upstream: str, rng: random.Random) -> DelimitedArr
     copies_seqs = [window6[p:p + SEED_LEN_DELIMIT] for p in chain]
     blk_s, _, repeat = _consensus_block(copies_seqs)
     spacings = [b - a for a, b in zip(chain, chain[1:], strict=False)]
+    coding_repeat, rt_adjacent = _delimitation_flags(
+        chain, spacings, len(window6), gene_spans, rt_offset)
     return DelimitedArray(locus=locus, copy_starts=chain, repeat=repeat,
                           score=score, shuffles_used=shuffles_used,
-                          spacings=spacings, block_offset=blk_s)
+                          spacings=spacings, block_offset=blk_s,
+                          coding_repeat=coding_repeat, rt_adjacent=rt_adjacent)
 
 
 # --------------------------------------------------------------------------
@@ -490,10 +560,19 @@ def pwm_max_shuffle_score(window: str, pwm: list[dict[str, float]],
 
 
 def pwm_extend(array: DelimitedArray, upstream: str, rng: random.Random,
+               gene_spans: list[tuple[int, int]] | None = None,
+               rt_offset: int | None = None,
                ) -> DelimitedArray:
     """'A position weight matrix of the repeat was then built, and matches that
     scored above the maximum of 200 shuffled regions were counted as copies'
-    (Methods p.32). Returns a new DelimitedArray with extended copy list."""
+    (Methods p.32). Returns a new DelimitedArray with extended copy list.
+
+    Delimitation flags (coding_repeat / rt_adjacent) are RECOMPUTED on the
+    extended copy list when gene_spans is supplied (extension can push the
+    last copy past the old annotation boundary). Without annotation the old
+    flags are stale the moment copies are added: rt_adjacent resets to None
+    (unverifiable) rather than silently keeping a value computed for a chain
+    that no longer exists (devin review PR#18, F1)."""
     window = upstream[-MAX_UPSTREAM_DELIMIT:].upper()
     background = {b: window.count(b) / max(1, len(window)) for b in BASES}
     w = len(array.repeat)
@@ -527,9 +606,22 @@ def pwm_extend(array: DelimitedArray, upstream: str, rng: random.Random,
         return array
     merged = sorted(set(starts) | set(extra))
     spacings = [b - a for a, b in zip(merged, merged[1:], strict=False)]
+    if gene_spans is not None:
+        coding_repeat, rt_adjacent = _delimitation_flags(
+            merged, spacings, len(window), gene_spans, rt_offset)
+    elif extra:
+        # ANY extension changes spacings: interstitial copies can break the
+        # all-mod-3 / single-gene coverage, so coding_repeat is unverifiable
+        # (devin re-review N2 — guarding only on a moved last copy kept a
+        # stale True). rt_adjacent survives when the last copy did not move.
+        coding_repeat = False
+        rt_adjacent = None if merged[-1] > starts[-1] else array.rt_adjacent
+    else:
+        coding_repeat, rt_adjacent = array.coding_repeat, array.rt_adjacent
     return DelimitedArray(locus=array.locus, copy_starts=merged, repeat=array.repeat,
                           score=array.score, shuffles_used=array.shuffles_used,
-                          spacings=spacings, block_offset=off)  # offset must survive
+                          spacings=spacings, block_offset=off,  # offset must survive
+                          coding_repeat=coding_repeat, rt_adjacent=rt_adjacent)
 
 
 def cross_scan(arrays: list[DelimitedArray], upstreams: dict[str, str],
@@ -575,8 +667,9 @@ def cross_scan(arrays: list[DelimitedArray], upstreams: dict[str, str],
 def exact_word_scan(locus: str, upstream: str, word_len: int = 12) -> ScanCall:
     """Paper's second scan setting (Methods p.32): an exact word (default 12 nt)
     recurring three times at regular spacing (100-450 nt, start to start) calls an
-    array — no shuffle control, no mismatch allowance. Used for the one R=3 locus
-    that did not beat its shuffles and for phylogeny tips."""
+    array — no shuffle control, no mismatch allowance. Applies to phylogeny-tip
+    loci and as the R=3 retention rule; callers reach it via
+    scan_with_exact_word_fallback."""
     window = upstream[-MAX_UPSTREAM_SCAN:].upper()
     counts: dict[str, list[int]] = {}
     for i in range(len(window) - word_len + 1):
@@ -592,3 +685,65 @@ def exact_word_scan(locus: str, upstream: str, word_len: int = 12) -> ScanCall:
                             copies=run,
                             note="exact-word rule, no shuffle control")
     return best or ScanCall(locus=locus, status="no_array")
+
+
+def aligned_repeat_length(copies_seqs: list[str],
+                          mafft_exe: str | None = None) -> int | None:
+    """Second repeat-length measurement of paper Methods p.32: "The repeat
+    length was measured both on ungapped copies and on a MAFFT alignment of
+    the copies." Shells out to mafft --auto (an explicit mafft_exe, else
+    $ARTHARNESS_MAFFT, else PATH); returns the alignment width after
+    trimming all-gap TERMINAL columns, or None when no mafft is available
+    (the caller keeps the ungapped measurement alone). NOT-IN-PAPER: the
+    trimming convention; live mafft is exercised via recorded-fixture tests
+    per repo convention, never in the offline suite.
+    """
+    import os
+    import shutil
+    import subprocess
+
+    exe = mafft_exe or os.environ.get("ARTHARNESS_MAFFT") or shutil.which("mafft")
+    if not exe:
+        return None
+    fasta = "".join(f">c{i}\n{s}\n" for i, s in enumerate(copies_seqs))
+    try:
+        proc = subprocess.run([str(exe), "--auto", "-"], input=fasta,
+                              capture_output=True, text=True, timeout=120)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    seqs = ["".join(line.strip() for line in block.splitlines()[1:])
+            for block in proc.stdout.split(">")[1:]]  # strip headers
+    if not seqs:
+        return None
+    width = max(len(s) for s in seqs)
+    seqs = [s.ljust(width, "-") for s in seqs]
+    cols = range(width)
+    keep = [i for i in cols
+            if any(s[i] != "-" for s in seqs)]  # any-copy base keeps a column
+    if not keep:
+        return 0
+    # trim only TERMINAL all-gap columns; internal gaps count toward the
+    # aligned length (the aligned block can exceed the ungapped consensus)
+    return keep[-1] - keep[0] + 1
+
+
+def scan_with_exact_word_fallback(locus: str, upstream: str,
+                                  rng: random.Random) -> ScanCall:
+    """Default scan setting with the paper's exact-word retention (Methods
+    p.32): "One locus with R = 3 that did not exceed its shuffles was
+    retained because an exact 12-nt word recurred three times at such
+    spacing." kmer_scan first; a locus it scores no_array is re-tested by
+    exact_word_scan. The <1,500-nt not_assessed rule applies to the combined
+    outcome ("loci with less than 1,500 nt of contig upstream of the RT and
+    no array were recorded as not assessed")."""
+    call = kmer_scan(locus, upstream, rng)
+    if call.status == "array":
+        return call
+    fallback = exact_word_scan(locus, upstream)
+    if fallback.status == "array":
+        return fallback
+    if len(upstream) < MIN_UPSTREAM_FOR_ASSESSMENT:
+        return ScanCall(locus=locus, status="not_assessed")
+    return fallback

@@ -125,10 +125,15 @@ def permutation_pvalue(
 ) -> float:
     """Seeded permutation test on the qualifying-proximity count.
 
-    Statistic: number of family occurrences passing proximity_qualifies().
-    Null: same number of occurrences drawn from the background gene pool.
-    GAP: the paper does not specify the null model; occurrences are permuted
-    over the full neighborhood-gene pool here.
+    Paper p.30 (verbatim): "genes of the family had to lie nearer to the RT
+    than randomly drawn genes of the same loci (P <= 0.05)". The NULL POOL is
+    stated (genes of the same loci — promotes() restricts the pool it passes
+    here); the
+    DISTANCE MEASURE is not, and graded distance-to-RT is not in the neighbor
+    records, so the STATISTIC is INTERPRETED as the count of occurrences
+    passing proximity_qualifies() (RT-adjacent AND same-strand-or-<=100bp).
+    Draw mechanics (k draws without replacement) also unstated. GAP: exact
+    nearness statistic — needs a distance-to-RT field from the producer.
     """
     rng = rng or random.Random(DEFAULT_SEED)
     observed = sum(1 for o in occurrences if proximity_qualifies(o))
@@ -157,7 +162,17 @@ def promotes(
         return False, 1.0
     if not passes_independence(occurrences):
         return False, 1.0
-    p = permutation_pvalue(occurrences, background, n_permutations, rng)
+    # Paper p.30: the null draws come from "genes of the same loci" — restrict
+    # the background to the family's loci before the permutation test (the
+    # full neighborhood pool made distant loci do the null's job).
+    family_loci = {o.locus_id for o in occurrences}
+    same_loci_pool = [g for g in background if g.locus_id in family_loci]
+    # INTERPRETED (devin review F4): unreachable via main() (background
+    # includes the occurrences, so their loci are always present) — the full
+    # pool fallback only serves exotic callers; a family's own genes stay in
+    # its null pool under the literal "genes of the same loci" reading.
+    pool = same_loci_pool if same_loci_pool else list(background)
+    p = permutation_pvalue(occurrences, pool, n_permutations, rng)
     return p <= PERMUTATION_P_MAX, p
 
 
@@ -173,6 +188,7 @@ def plan() -> str:
         f" >= {INDEPENDENT_MIN_RT_CLASSES} classes",
         f"    3. permutation test P <= {PERMUTATION_P_MAX} for RT proximity AND"
         f" (same strand OR within {ADJACENT_MAX_BP} bp of adjacent gene);"
+        " null pool: genes of the SAME LOCI (paper p.30)",
         f" n={N_PERMUTATIONS} permutations (GAP placeholder)",
         "  controls: designated beforehand (GAP: identities not listed in paper)",
     ]

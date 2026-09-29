@@ -408,6 +408,38 @@ def test_permutation_pvalue_unenriched_is_one():
     assert p == 1.0  # every permutation ties or exceeds
 
 
+def test_promotes_null_draws_from_same_loci():
+    # Paper p.30 (verbatim): "genes of the family had to lie nearer to the RT
+    # than randomly drawn genes OF THE SAME LOCI (P <= 0.05)" — the null pool
+    # is the family's own loci, not the global neighborhood pool. When the
+    # same-loci genes are equally RT-proximal, the family must NOT be
+    # promoted, even though a global pool (mostly distant, non-qualifying
+    # loci) would give a small p. FAILING-FIRST against the global-pool code.
+    occurrences = [
+        _gene(locus_id="l1", cluster_id_90="c1", biosample="b1",
+              rt_class="retron"),
+        _gene(locus_id="l2", cluster_id_90="c2", biosample="b2",
+              rt_class="DGR"),
+        _gene(locus_id="l3", cluster_id_90="c3", biosample="b3",
+              rt_class="retron"),
+    ]
+    same_loci_qualifying = [
+        _gene(locus_id=f"l{i}", rt_adjacent=True, same_strand_as_rt=True,
+              distance_to_adjacent_bp=0)
+        for i in (1, 2, 3) for _ in range(10)
+    ]
+    other_loci_nonqualifying = [
+        _gene(locus_id=f"far{i}", rt_adjacent=False, same_strand_as_rt=False,
+              distance_to_adjacent_bp=None)
+        for i in range(500)
+    ]
+    background = same_loci_qualifying + other_loci_nonqualifying
+    promoted, p = f06.promotes(occurrences, {"cladeA": 100}, background,
+                               n_permutations=200, rng=random.Random(1))
+    assert p == 1.0, p  # same-loci draws qualify as often as the family
+    assert promoted is False
+
+
 def test_promotes_all_three_filters():
     occurrences = [
         _gene(locus_id="l1", cluster_id_90="c1", biosample="b1",
@@ -431,3 +463,27 @@ def test_promotes_fails_early_returns_p1():
     occs = [_gene(locus_id=f"l{i}", cluster_id_90="c1") for i in range(3)]
     promoted, p = f06.promotes(occs, {"cladeA": 100}, [])
     assert promoted is False and p == 1.0
+
+
+def test_novel_eighth_class_vs_scattered_unplaced():
+    # Paper p.29 (verbatim): "A further 25,737 clusters formed a loosely
+    # organized group on the tree apart from any labeled member and were
+    # treated as an eighth class of 'novel' RTs. The 137,385 scattered
+    # clusters that could not be placed formed the ninth class of 'unplaced'
+    # RTs." classify_target never returned 'novel' (raw-fidelity audit).
+    # INTERPRETED criterion: a majority of unlabeled neighbors in the k
+    # nearest leaves = grouped apart from labeled members -> novel; labeled
+    # but disagreeing neighbors -> scattered -> unplaced.
+    t1, t2 = [], None  # no tier-1/2 signal
+    # neighborhood dominated by other unplaced clusters -> novel
+    out = f04.classify_target("x", t1, t2, ["unplaced"] * 3 + ["retron", "retron"])
+    assert out == ("tier3", "novel"), out
+    # labeled neighbors that disagree -> scattered unplaced
+    out = f04.classify_target("y", t1, t2, ["retron", "DGR", "retron", "UG", "Abi"])
+    assert out == ("unplaced", "unplaced"), out
+    # five agreeing labeled neighbors still place (unchanged behavior)
+    out = f04.classify_target("z", t1, t2, ["retron"] * 5)
+    assert out == ("tier3", "retron"), out
+    # no neighbor data at all stays unplaced (no evidence of a group)
+    out = f04.classify_target("w", t1, t2, None)
+    assert out == ("unplaced", "unplaced"), out

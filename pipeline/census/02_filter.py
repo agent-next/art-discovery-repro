@@ -113,7 +113,9 @@ def parse_hmmsearch_domtbl(path: str | Path) -> Iterator[Hit]:
     """Yield one Hit per target, keeping its highest-bitscore domain line.
 
     HMMER3 domtblout columns used: target name (0), tlen (2), query name (3),
-    qlen (5), domain bitscore (13), env from/to (19/20) for profile coverage.
+    qlen (5), domain bitscore (13), hmm from/to (15/16) — model coordinates —
+    for profile coverage (envelope cols 20/21 are sequence coords; grok
+    review 2026-09-24).
     """
     best: dict[str, Hit] = {}
     with Path(path).open() as fh:
@@ -242,6 +244,3 @@ def main(argv: list[str] | None = None) -> int:
 if __name__ == "__main__":
     raise SystemExit(main())
 
-
-def weak_hit_note() -> str:
-    return ("weak = low score AND low coverage AND no YxDD, jointly")

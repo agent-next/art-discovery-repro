@@ -160,3 +160,27 @@ def test_pwm_extend_preserves_block_offset():
     out = pwm_extend(arr, window, rng)
     assert len(out.copy_starts) > len(copies)
     assert out.block_offset == 4  # must survive the extension round-trip
+
+
+def test_consensus_block_nonadjacent_second_lapse_ends_block():
+    # Paper p.32 (verbatim): "at least 80% of copies carry the consensus base,
+    # with ONE lapse tolerated" — a single lapse budget per block, not per run
+    # of passing columns. A passing column between two failures must NOT reset
+    # the budget; the block ends exclusive of the second failing column.
+    # Column fractions (over the 4 copies): 1.0, 0.5 (lapse), 1.0 (pass),
+    # 0.5 (second lapse), then 0.5 to end -> (0, 3) under a total budget.
+    # (The reset-after-pass reading returned (0, 8): with an alternating
+    # pattern every other failing column was re-tolerated. Verified by devin
+    # review F5; the commit message's (0, 4) counterfactual was wrong.)
+    from artharness.arrays import _consensus_block
+
+    cols = [
+        "AAAAAAAA",  # copy 1
+        "ACACACAC",  # copy 2
+        "AAAAAAAA",  # copy 3
+        "ACACACAC",  # copy 4
+    ]
+    s0, e0, _cons = _consensus_block(cols)
+    assert (s0, e0) == (0, 3), (s0, e0)
+    # (the lapse column's consensus letter is a tied count; determinism of
+    # THAT letter is pinned separately by the tie-break test below)

@@ -51,6 +51,10 @@ def run_tournament(reports: dict[str, str], judge: JudgeFn,
     names = sorted(reports)
     wins: dict[str, int] = {n: 0 for n in names}  # every report's win count exists
     games = 0
+    discarded = 0
+    # decisive games per unordered pair: bradley_terry's n_ij must match what
+    # was actually decided, not assume it (audit finding 9)
+    played: dict[frozenset[str], int] = {}
     for a, b in permutations(names, 2):
         # anonymize by shuffling opaque labels per game
         labels = [f"report-{i}" for i in ("X", "Y")]
@@ -65,28 +69,48 @@ def run_tournament(reports: dict[str, str], judge: JudgeFn,
             wb = -math.inf
         if wa > wb:
             wins[a] += 1
+            played[frozenset((a, b))] = played.get(frozenset((a, b)), 0) + 1
         elif wb > wa:
             wins[b] += 1
+            played[frozenset((a, b))] = played.get(frozenset((a, b)), 0) + 1
+        else:
+            # exact tie (equal weighted scores, incl. double soundness
+            # auto-lose): INTERPRETED discard — the paper states only "the
+            # report with the higher weighted score won"; the game is excluded
+            # from the fit via per-pair n_ij instead of silently counting
+            discarded += 1
         games += 1
-    strengths = bradley_terry(wins, names)
+    strengths = bradley_terry(wins, names, games_by_pair=played)
     ranking = sorted(names, key=lambda n: strengths[n], reverse=True)
-    return {"games": games, "wins": dict(wins), "strengths": strengths,
+    return {"games": games, "discarded_games": discarded,
+            "wins": dict(wins), "strengths": strengths,
             "ranking": ranking}
 
 
 def bradley_terry(wins: dict[str, int], names: list[str],
-                  iters: int = 200, tol: float = 1e-8) -> dict[str, float]:
+                  iters: int = 200, tol: float = 1e-8,
+                  games_by_pair: dict[frozenset[str], int] | None = None,
+                  ) -> dict[str, float]:
     """Maximum-likelihood Bradley-Terry strengths via MM algorithm (Hunter 2004).
 
-    Unreferenced names get the prior strength 1.0 (NOT-IN-PAPER: paper does not
-    specify regularization; ties in win counts resolve to equal strengths).
+    games_by_pair: decisive games actually played per unordered pair. When
+    omitted, every pair is assumed to have met exactly twice (the full
+    round-robin without ties). Pairs with 0 decisive games (ties discarded
+    per run_tournament) contribute nothing to the fit. Unreferenced names
+    get the prior strength 1.0 (NOT-IN-PAPER: paper does not specify
+    regularization; ties in win counts resolve to equal strengths).
     """
     idx = {n: i for i, n in enumerate(names)}
     p = [1.0] * len(names)
     w = [wins.get(n, 0) for n in names]
-    # the round-robin plays every ORDERED pair once, so each unordered pair
-    # meets exactly twice: wins[i] + wins[j] == n_ij for every pair i != j
-    n_ij = 2
+    # decisive games per unordered pair; default = the full round-robin
+    # (every ORDERED pair once, so each unordered pair meets twice)
+    n_default = 2
+    def pair_games(i: int, j: int) -> int:
+        if games_by_pair is None:
+            return n_default
+        return games_by_pair.get(frozenset((names[i], names[j])), 0)
+
     for _ in range(iters):
         new = list(p)
         for i in range(len(names)):
@@ -94,6 +118,9 @@ def bradley_terry(wins: dict[str, int], names: list[str],
             for j in range(len(names)):
                 if i == j:
                     continue
+                n_ij = pair_games(i, j)
+                if n_ij == 0:
+                    continue  # discarded (tied) pair contributes nothing
                 denom += n_ij / (max(p[i], 1e-9) + max(p[j], 1e-9))
             if denom > 0:
                 new[i] = w[i] / denom

@@ -75,3 +75,54 @@ def test_resolve_backend_rejects_non_dotted_path():
 
 def test_resolve_backend_loads_dotted_callable():
     assert resolve_backend("benchmark.run_benchmark.format_matrix") is format_matrix
+
+
+def test_session_written_invalid_json_scores_zero_not_backend_error(tmp_path):
+    # Audit 2026-09-28 finding 3: a model-written invalid submission.json used
+    # to die inside default-style backends (json.loads in _run) and surface as
+    # backend_error with score=None — excluded from grading, i.e. treated
+    # BETTER than writing nothing (which scores 0). A broken submission must
+    # be a MODEL failure: graded on an empty submission (score 0), status
+    # invalid_submission, never excluded. FAILING-FIRST.
+    def broken_json_backend(spec):
+        return {"report": "", "submission_text": '{"findings": [BROKEN'}
+
+    records = run_benchmark(models=["m"], levels=["L3"], attempts=1,
+                            outdir=tmp_path, backend=broken_json_backend,
+                            allow_synthetic=True)
+    rec = records[0]
+    assert rec["status"] == "invalid_submission"
+    assert rec["score"] == 0  # graded as empty, not excluded (None)
+    assert "parse_error" in rec
+
+
+def test_session_written_nothing_scores_zero_ok(tmp_path):
+    # companion: no submission file at all -> empty submission, status ok, 0
+    def nofile_backend(spec):
+        return {"report": "", "submission_text": None}
+
+    records = run_benchmark(models=["m"], levels=["L3"], attempts=1,
+                            outdir=tmp_path, backend=nofile_backend,
+                            allow_synthetic=True)
+    rec = records[0]
+    assert rec["status"] == "ok"
+    assert rec["score"] == 0
+
+
+def test_malformed_findings_structure_is_model_zero(tmp_path):
+    # devin round-3 (PR#20): valid JSON whose `findings` is malformed (not a
+    # list, or items missing `claim`) escaped the invalid_submission path —
+    # submission_from_dict raised uncaught and killed run_attempt.
+    def malformed(spec):
+        return {"report": "", "submission_text": '{"findings": "not-a-list"}'}
+
+    def missing_claim(spec):
+        return {"report": "", "submission_text": '{"findings": [{"no_claim": 1}]}'}
+
+    for backend in (malformed, missing_claim):
+        records = run_benchmark(models=["m"], levels=["L3"], attempts=1,
+                                outdir=tmp_path / backend.__name__,
+                                backend=backend, allow_synthetic=True)
+        rec = records[0]
+        assert rec["status"] == "invalid_submission", rec
+        assert rec["score"] == 0

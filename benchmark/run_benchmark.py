@@ -80,12 +80,15 @@ def default_backend(model: str) -> Backend:
             disallowed_tools=disallowed_for(spec.env),  # enforce the L ladder (C1)
         ))
         # The session is instructed to write report.md + submission.json itself.
+        # The RAW TEXT is returned: parsing happens in run_attempt so a
+        # model-written invalid JSON is graded as a model zero, never raised
+        # in here to masquerade as a backend (infra) error.
         report_path = spec.run_dir / "report.md"
         submission_path = spec.run_dir / "submission.json"
         return {
             "report": report_path.read_text() if report_path.exists() else "",
-            "submission": json.loads(submission_path.read_text())
-            if submission_path.exists() else {"findings": []},
+            "submission_text": submission_path.read_text()
+            if submission_path.exists() else None,
         }
 
     return _run
@@ -135,12 +138,39 @@ def run_attempt(spec: AttemptSpec, backend: Backend, judge: Judge,
     report_path = spec.run_dir / "report.md"
     submission_path = spec.run_dir / "submission.json"
     report_path.write_text(out.get("report", ""))
-    submission_data = out.get("submission", {"findings": []})
+    invalid_reason: str | None = None
+    if "submission_text" in out:
+        # session-written file: parse HERE. Invalid JSON is a MODEL failure
+        # (audited 2026-09-28: it used to raise inside the backend and land as
+        # backend_error/score=None — excluded from grading, i.e. treated
+        # better than writing nothing, which scores 0).
+        text = out["submission_text"]
+        submission_data = {"findings": []}
+        if text is not None:
+            try:
+                parsed = json.loads(text)
+                if not isinstance(parsed, dict):
+                    raise ValueError("submission.json is not a JSON object")
+                submission_data = parsed
+            except (json.JSONDecodeError, ValueError) as exc:
+                submission_data = {"findings": []}
+                invalid_reason = str(exc)[:200]
+    else:
+        submission_data = out.get("submission", {"findings": []})
     submission_path.write_text(json.dumps(submission_data, indent=2) + "\n")
-    submission = submission_from_dict(submission_data, report_path=str(report_path))
+    try:
+        submission = submission_from_dict(submission_data,
+                                          report_path=str(report_path))
+    except (TypeError, KeyError, ValueError, AttributeError) as exc:
+        # valid JSON, malformed structure (findings not a list / items lack
+        # "claim"): MODEL failure — grade an empty submission, not a crash
+        submission = submission_from_dict({"findings": []},
+                                          report_path=str(report_path))
+        invalid_reason = f"malformed findings structure: {exc}"[:200]
     grade = judge(submission, rubric)
     base.update({
-        "status": "ok",
+        "status": "invalid_submission" if invalid_reason else "ok",
+        "parse_error": invalid_reason,
         "score": grade.score,
         "recognized_repeat_array": grade.recognized_repeat_array,
         "asserted": grade.asserted,

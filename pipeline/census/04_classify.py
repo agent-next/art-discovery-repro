@@ -153,6 +153,17 @@ def classify_target(
         assigned = tier3_assign(tier3_neighbors)
         if assigned is not None:
             return "tier3", assigned
+        # paper p.29: clusters that "formed a loosely organized group on the
+        # tree apart from any labeled member" are the eighth class "novel";
+        # "scattered clusters that could not be placed" are the ninth
+        # "unplaced". INTERPRETED criterion (paper gives no rule): a majority
+        # of unlabeled neighbors among the k nearest leaves = grouped apart
+        # from labeled members -> novel; labeled-but-disagreeing neighborhood
+        # = scattered -> unplaced. NOT-IN-PAPER: the majority threshold.
+        nearest = tier3_neighbors[:TIER3_NEAREST_LEAVES]
+        unlabeled = sum(1 for c in nearest if not c or c in ("unplaced", "-"))
+        if unlabeled * 2 > len(nearest):
+            return "tier3", "novel"
     return "unplaced", "unplaced"
 
 
