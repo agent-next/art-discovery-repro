@@ -12,6 +12,11 @@ from dataclasses import dataclass, field
 class CampaignConfig:
     # Harness scale (paper Methods "Autonomous research harness", p.28)
     max_concurrent_sessions: int = 58  # paper: "permitted up to 58 concurrent sessions"
+    # NOT-IN-PAPER: sessions actually dispatched in parallel, capped at
+    # max_concurrent_sessions. Default 1 keeps offline tests and dry runs
+    # deterministic (task ids follow creation order); a live campaign sets it up to
+    # max_concurrent_sessions (paper: 58).
+    dispatch_concurrency: int = 1
     sandbox_cpus: int = 60  # paper: sandbox with 60 CPU cores
     sandbox_mem_gib: int = 192  # paper: 192 GiB of memory, no GPU
 
