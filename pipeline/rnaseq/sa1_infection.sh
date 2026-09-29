@@ -121,7 +121,7 @@ while IFS= read -r acc; do
         run bash -c 'set -o pipefail
             for n in 1 2; do
                 url=$(curl -fsSL "https://www.ebi.ac.uk/ena/portal/api/filereport?accession=$1&result=read_run&fields=fastq_ftp&format=tsv" |
-                    tail -n +2 | tr ";" "\n" | grep "_${n}.fastq.gz")
+                    tail -n +2 | cut -f2 | tr ";" "\n" | grep "_${n}.fastq.gz")
                 curl -fsSL -o "$2/$1_${n}.fastq.gz" "https://${url}"
             done' bash "$acc" "$OUT/fastq"
         r1="$OUT/fastq/${acc}_1.fastq.gz" r2="$OUT/fastq/${acc}_2.fastq.gz"

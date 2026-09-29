@@ -97,3 +97,45 @@ def test_ena_source_downloads_gz_and_skips_fasterq_dump(tmp_path: Path):
     assert "-i out/fastq/SRR19152328_1.fastq.gz -I out/fastq/SRR19152328_2.fastq.gz" in out
     assert "out/fastq/SRR19152328_1.fastq.gz out/fastq/SRR19152328_2.fastq.gz" in [
         ln for ln in out.splitlines() if ln.startswith("rm -rf")][0]
+
+
+def test_ena_source_resolves_urls_from_the_real_filereport_layout(tmp_path: Path):
+    # ENA's filereport TSV with fields=fastq_ftp has TWO columns (run_accession, urls);
+    # a first attempt cut the whole line and produced a malformed URL.
+    bin_ = tmp_path / "bin"
+    bin_.mkdir()
+    log = tmp_path / "curl.log"
+    (bin_ / "curl").write_text(
+        "#!/bin/bash\n"
+        'case "$*" in\n'
+        '  *filereport*) printf "run_accession\\tfastq_ftp\\nSRR19152328\\t'
+        'ftp.sra.ebi.ac.uk/vol1/fastq/SRR191/028/SRR19152328/SRR19152328_1.fastq.gz;'
+        'ftp.sra.ebi.ac.uk/vol1/fastq/SRR191/028/SRR19152328/SRR19152328_2.fastq.gz\\n" ;;\n'
+        f'  *) echo "$*" >> {log}; f="";'
+        ' while [ $# -gt 0 ]; do [ "$1" = -o ] && f="$2"; shift; done; : > "$f" ;;\n'
+        "esac\n")
+    (bin_ / "featureCounts").write_text(
+        "#!/bin/bash\n"
+        'while [ $# -gt 0 ]; do [ "$1" = -o ] && f="$2"; shift; done\n'
+        'printf "Geneid\\tChr\\tStart\\tEnd\\tStrand\\tLength\\tx.bam\\ng1\\tc\\t1\\t9\\t+\\t9\\t5\\n" > "$f"\n')
+    for tool in ("bowtie2-build", "fastp", "bowtie2", "samtools"):
+        (bin_ / tool).write_text("#!/bin/bash\ncat > /dev/null 2>&1 < /dev/null; exit 0\n")
+    for f in bin_.iterdir():
+        f.chmod(0o755)
+    for name in ("a.fna", "b.fna"):
+        (tmp_path / name).write_text(">x\nACGT\n")
+    accs = tmp_path / "acc.txt"
+    accs.write_text("SRR19152328\n")
+    (tmp_path / "out" / "fastq").mkdir(parents=True)
+    (tmp_path / "out" / "trim").mkdir()
+    (tmp_path / "out" / "bam").mkdir()
+    env = {"PATH": f"{bin_}:/usr/bin:/bin", "FASTQ_SOURCE": "ena", "OUTDIR": str(tmp_path / "out"),
+           "REF_SA1": str(tmp_path / "a.fna"), "REF_HOST": str(tmp_path / "b.fna"),
+           "FEATURES": str(tmp_path / "f.gtf")}
+    res = subprocess.run(["bash", str(SCRIPT), str(accs)], capture_output=True, text=True,
+                         env=env)
+    assert res.returncode == 0, res.stderr
+    urls = [ln.split()[-1] for ln in log.read_text().splitlines()]
+    assert urls == [
+        "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR191/028/SRR19152328/SRR19152328_1.fastq.gz",
+        "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR191/028/SRR19152328/SRR19152328_2.fastq.gz"]
