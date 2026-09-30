@@ -9,7 +9,7 @@ real blocker is hit; every blocker has a WHY/HOW/WHAT entry in REPRODUCTION.md �
 - [x] `arrays.py`: k-mer scan, delimitation, PWM extension, cross-scan (Methods p.32)
 - [x] Pipeline wrappers (census 01–06, art_family, rnaseq, db subset), connectors, 12 skill guides, benchmark
 - [x] `docs/paper-notes.md`, `REPRODUCTION.md`, `brief/research_brief.md` (6-anchor reconstruction)
-- [x] Five-round independent review; v0.1.0 tagged; repo renamed `art-discovery-repro`
+- [x] Five-round independent review; first release cut (now v0.0.1); repo renamed `art-discovery-repro`
 - [x] Threaded dispatch (`dispatch_concurrency`, capped at 58) with locked shared state
 - [x] Family definition: longest-contig cluster representatives; seed BLASTP now searches a GenBank BLAST db (the paper's pool never contained the BLASTP hits)
 - [x] Runnable demo (`make demo`, `make demo-model`): full workflow at toy scale, rule policy or local small model, explained walkthrough
@@ -23,6 +23,8 @@ real blocker is hit; every blocker has a WHY/HOW/WHAT entry in REPRODUCTION.md �
       (owner decision: budget, model = Fable 5 in place of Mythos 5)
 - [ ] Rename the local checkout directory `art-harness` → `art-discovery-repro` from a fresh session
 - [ ] Owner closeout report (goal-html-report)
+
+State and next steps for the next agent: `docs/HANDOFF.md`.
 
 ## Blockers ledger
 See REPRODUCTION.md §5 (GAP-1 … GAP-7): unreleased brief and transcripts, Mythos 5
