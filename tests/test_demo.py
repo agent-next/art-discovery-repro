@@ -251,6 +251,29 @@ def test_replay_page_is_self_contained_and_survives_hostile_text(tmp_path: Path)
     assert _replay_data(tmp_path)["events"][0]["brief"] == nasty
 
 
+def test_replay_stations_do_not_overlap_and_their_text_fits():
+    from artharness.demo.replay import TEMPLATE
+
+    js = TEMPLATE.read_text()
+    block = re.search(r"const ST = \{(.*?)\};", js, re.S).group(1)
+    st = {k: tuple(map(int, v.split(","))) for k, v in
+          re.findall(r"(\w+):\[([\d,]+)\]", block)}
+    assert len(st) == 10
+    view_w, view_h = map(int, re.search(r'viewBox="0 0 (\d+) (\d+)"', js).groups())
+    for k, (x, y, w, h) in st.items():
+        assert x >= 0 and y >= 0 and x + w <= view_w and y + h <= view_h, k
+    names = sorted(st)
+    for i, a in enumerate(names):
+        for b in names[i + 1:]:
+            ax, ay, aw, ah = st[a]
+            bx, by, bw, bh = st[b]
+            assert not (ax < bx + bw and bx < ax + aw and ay < by + bh and by < ay + ah), (a, b)
+    # 18px bold titles are ~10.5 px per character; sub-lines wrap at 21 characters of 13.5px text
+    titles = dict(re.findall(r"(\w+):\['([^']+)'", re.search(r"const TITLE = \{(.*?)\};", js, re.S).group(1)))
+    for k, title in titles.items():
+        assert len(title) * 10.5 <= st[k][2] - 8, (k, title)
+
+
 def test_readme_hero_svg_is_well_formed_and_its_timeline_is_wired():
     import xml.etree.ElementTree as ET
 
