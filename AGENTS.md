@@ -46,6 +46,7 @@ Single test file: `.venv/bin/python -m pytest tests/test_<name>.py`.
   reconstruction from six anchors (cited inline), NOT the verbatim original.
   Never present it as Anthropic's text.
 - Task receipts: `task-runs/<YYYYMMDD>-<topic>/`.
+- Versions: agents release only `0.0.x`, starting at `0.0.1`; never `0.1.0` or higher (owner, 2026-09-29).
 - Commit small, one logical change per commit, Conventional Commits, no AI attribution.
 - Worktrees for multi-file work: `.worktrees/<task>-<YYYYMMDD>` (org convention).
 - Offline by default: unit tests must not hit the network. Live connectors get a

@@ -65,10 +65,11 @@ This repo rebuilds the three layers of the paper with public tools:
 
 ## Status
 
-v0.1.0 tagged. All three layers are implemented and tested offline (`make check`:
+Current version 0.0.1 (agent releases stay in 0.0.x). All three layers are implemented and tested offline (`make check`:
 ruff, shellcheck, pytest with a coverage floor). The demo above runs the full workflow at
-toy scale. No live paid-model campaign, benchmark run or real-data pipeline run has been
-executed yet: those are budget/compute-gated.
+toy scale. No live paid-model campaign or paid benchmark run has been executed yet: those are
+budget-gated. The census, RNA-seq and RT-locus pipelines have run on real public data
+(`task-runs/20260929-real-census/`).
 [`REPRODUCTION.md`](REPRODUCTION.md) maps every paper element to its component and state
 and lists the unreproducible gaps; [`TASKS.md`](TASKS.md) holds the open work.
 
