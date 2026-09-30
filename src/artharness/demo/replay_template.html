@@ -33,19 +33,18 @@
   select { font:inherit; border:1px solid var(--line); border-radius:8px; padding:4px 6px; }
   .ticks { display:block; height:14px; margin:0 6px; }
   .station rect { fill:var(--card); stroke:var(--line); stroke-width:1.5; }
-  .station text.title { font-weight:700; font-size:15px; fill:var(--ink); }
-  .station text.sub { font-size:11.5px; fill:var(--mute); }
+  .station text.title { font-weight:700; font-size:18px; fill:var(--ink); }
+  .station text.sub { font-size:13.5px; fill:var(--mute); }
   .station.hot rect { stroke:var(--blue); stroke-width:3; }
   .station.hot.bad rect { stroke:var(--bad); }
   .station.hot.good rect { stroke:var(--ok); }
   .arrow { stroke:var(--line); stroke-width:2.5; fill:none; marker-end:url(#ah); }
-  .token { transition:transform .9s cubic-bezier(.4,0,.2,1), opacity .5s; }
   .token circle { stroke:#fff; stroke-width:2; }
-  .token text { font-size:11px; font-weight:700; fill:#fff; text-anchor:middle; dominant-baseline:central; }
+  .token text { font-size:13px; font-weight:700; fill:#fff; text-anchor:middle; dominant-baseline:central; }
   .token.ghost circle { fill:#fff !important; stroke:var(--mute); stroke-dasharray:3 3; }
   .token.ghost text { fill:var(--mute); }
   .stage rect { fill:#eef1f7; stroke:var(--line); }
-  .stage text { font-size:12.5px; font-weight:600; fill:var(--mute); text-anchor:middle; }
+  .stage text { font-size:14px; font-weight:600; fill:var(--mute); text-anchor:middle; }
   .stage.active rect { fill:#e6efff; stroke:var(--blue); stroke-width:2; }
   .stage.active text { fill:var(--blue); }
   .stage.done rect { fill:#e5f6ed; stroke:var(--ok); }
@@ -57,15 +56,17 @@
   .pop { animation:pop .5s ease-out both; transform-box:fill-box; transform-origin:center; }
   @keyframes pop { from { opacity:0; transform:scale(.6);} to { opacity:1; transform:scale(1);} }
   .fly { animation:fade .6s ease-out both; } @keyframes fade { from { opacity:0;} to { opacity:1;} }
-  .bubble rect { fill:#fff; stroke-width:2; } .bubble text { font-size:12px; fill:var(--ink); }
+  .bubble rect { fill:#fff; stroke-width:2.5; } .bubble text { font-size:15px; fill:var(--ink); }
   .bubble.bad rect { stroke:var(--bad); } .bubble.good rect { stroke:var(--ok); }
   .bubble.warn rect { stroke:var(--warn); } .bubble.info rect { stroke:var(--blue); }
-  .chip rect { fill:#eef4ff; stroke:var(--blue); } .chip text { font-size:11.5px; fill:var(--blue); }
+  .chip rect { fill:#eef4ff; stroke:var(--blue); } .chip text { font-size:13.5px; fill:var(--blue); }
   .chip.err rect { fill:#fdeaea; stroke:var(--bad); } .chip.err text { fill:var(--bad); }
   .kbdot { stroke:#fff; stroke-width:1.5; }
   .banner { padding:14px 18px; margin-top:10px; border-left:5px solid var(--blue); }
   .banner.bad { border-left-color:var(--bad); } .banner.good { border-left-color:var(--ok); }
-  @media (prefers-reduced-motion: reduce) { .token { transition:none; } .pop,.fly { animation:none; } }
+  body.cap .pop, body.cap .fly { animation:none; }
+  body.cap .controls, body.cap #ticks, body.cap p.meta { display:none; }
+  @media (prefers-reduced-motion: reduce) { .pop,.fly { animation:none; } }
 </style>
 </head>
 <body>
@@ -74,7 +75,7 @@
   <span class="meta" id="meta"></span>
 </header>
 <div class="wrap">
-  <div class="card"><svg id="scene" viewBox="0 0 1200 620" role="img"
+  <div class="card"><svg id="scene" viewBox="0 0 1200 690" role="img"
        aria-label="Animated replay of the campaign"></svg></div>
   <div class="counters" id="counters"></div>
   <div class="card caption" id="caption"><div class="what"></div><div class="why"></div></div>
@@ -101,10 +102,10 @@ const STAGES = ['1_input_assembly','2_database_sweep','3_rt_classification',
 const STAGE_LABEL = ['1 Inventory','2 Sweep','3 Classify','4 Census','5 Deep dives'];
 const HUE = ['#2f6fed','#0e9aa7','#7a4fd6','#e08a1e','#d6457a'];
 const ST = {   // station boxes: x, y, w, h
-  queue:[40,240,140,120], worker:[300,240,150,120], supervisor:[570,240,150,120],
-  curator:[840,240,140,120], kb:[1030,240,140,120],
-  sandbox:[300,430,150,90], triage:[300,110,150,80], bin:[490,110,110,80],
-  editor:[570,430,150,90], report:[840,430,140,90]
+  queue:[40,245,150,160], worker:[300,245,160,160], supervisor:[570,245,160,160],
+  curator:[830,245,150,160], kb:[1010,245,170,160],
+  sandbox:[300,470,160,100], triage:[300,120,160,80], bin:[60,120,170,80],
+  editor:[570,470,160,100], report:[840,470,150,100]
 };
 const TITLE = {queue:['Task queue','open tasks wait here'], worker:['Worker','plans, runs tools, writes'],
   supervisor:['Supervisor','checks claims, accepts or returns'], curator:['Curator','files the finding'],
@@ -172,8 +173,9 @@ function apply(st, e, isLast) {
       st.c.released++; const par = st.tokens[e.parent];
       st.ghosts.push({stage: par ? par.stage : st.active, label:'?'});
     } else { st.c.rejected++; st.rej.push(e); }
-    if (isLast) dec.push({t:'triage', ok:e.ok, text:short(e.brief, 30),
-                 lines:e.ok ? ['released to queue'] : ['rejected:'].concat(wrap(e.why, 22).slice(0,4))});
+    if (isLast) dec.push({t:'triage', ok:e.ok,
+                 lines:['follow-up: ' + short(e.brief, 30)].concat(
+                   e.ok ? ['released to the queue'] : ['rejected:'].concat(wrap(e.why, 34).slice(0,4)))});
   } else if (e.k === 'report') {
     st.sheet = st.sheet || {at:'editor'}; st.sheet.at = e.filed ? 'report' : 'editor';
     if (isLast) dec.push({t:'bubble', at:'report', kind:e.filed ? 'good':'bad',
@@ -231,6 +233,7 @@ const mk = (tag, attrs, parent) => { const n = document.createElementNS(NS, tag)
   for (const k in attrs) n.setAttribute(k, attrs[k]); (parent || svg).appendChild(n); return n; };
 const center = k => [ST[k][0] + ST[k][2]/2, ST[k][1] + ST[k][3]/2];
 const stationEl = {}; const tokenEl = {}; let dynLayer, stageEls = [], gateEls = [];
+const TOKEN_R = 17, KB_R = 10;
 
 function build() {
   const defs = mk('defs', {});
@@ -243,7 +246,7 @@ function build() {
     const gg = mk('g', {class:'gate', transform:`translate(${x + 200},30)`});
     mk('path', {d:'M0,0 h8 v20 h-8 z M-2,10 h12', stroke:'none'}, gg); gateEls.push(gg);
   });
-  const t = mk('text', {x:600, y:88, 'text-anchor':'middle', 'font-size':12, fill:'#6b7488'});
+  const t = mk('text', {x:600, y:106, 'text-anchor':'middle', 'font-size':13, fill:'#6b7488'});
   t.textContent = 'each gate is a script; the next stage stays closed until it passes';
   const A = [['queue','worker'],['worker','supervisor'],['supervisor','curator'],['curator','kb'],
              ['worker','sandbox'],['supervisor','editor'],['editor','report'],['worker','triage'],['triage','bin']];
@@ -253,85 +256,89 @@ function build() {
     const sx = ax + dx * ST[a][2]/2, sy = ay + dy * ST[a][3]/2, ex = bx - dx * (ST[b][2]/2 + 6), ey = by - dy * (ST[b][3]/2 + 6);
     mk('path', {class:'arrow', d:`M${sx},${sy} L${ex},${ey}`});
   }
-  mk('path', {class:'arrow', d:'M570,330 C520,330 520,330 452,330', style:'stroke-dasharray:5 5'});
-  const rl = mk('text', {x:510, y:352, 'text-anchor':'middle', 'font-size':11, fill:'#d64545'}); rl.textContent = 'revise';
+  const ry = center('worker')[1] + 36;
+  mk('path', {class:'arrow', d:`M${ST.supervisor[0]},${ry} L${ST.worker[0] + ST.worker[2] + 6},${ry}`, style:'stroke-dasharray:5 5'});
+  const rl = mk('text', {x:(ST.supervisor[0] + ST.worker[0] + ST.worker[2])/2, y:ry + 20, 'text-anchor':'middle', 'font-size':13, fill:'#d64545'}); rl.textContent = 'revise';
   for (const k in ST) {
     const [x, y, w, h] = ST[k]; const g = mk('g', {class:'station'});
     mk('rect', {x, y, width:w, height:h, rx:12}, g);
-    const a = mk('text', {class:'title', x:x + w/2, y:y + 22, 'text-anchor':'middle'}, g); a.textContent = TITLE[k][0];
-    const b = mk('text', {class:'sub', x:x + w/2, y:y + 38, 'text-anchor':'middle'}, g); b.textContent = TITLE[k][1];
+    const a = mk('text', {class:'title', x:x + w/2, y:y + 26, 'text-anchor':'middle'}, g); a.textContent = TITLE[k][0];
+    wrap(TITLE[k][1], 21).forEach((ln, n) => { const b = mk('text', {class:'sub', x:x + w/2, y:y + 46 + n * 16, 'text-anchor':'middle'}, g); b.textContent = ln; });
     stationEl[k] = g;
   }
   dynLayer = mk('g', {});
 }
 function slot(kind, idx) {
-  const [x, y, w, h] = ST[kind]; const cols = 4, r = 15;
-  const col = idx % cols, row = Math.floor(idx / cols);
-  return [x + 24 + col * 34, y + 62 + row * 34];
+  const [x, y] = ST[kind]; const col = idx % 4, row = Math.floor(idx / 4);
+  return [x + 28 + col * 34, y + 100 + row * 36];
 }
-function render(i, animate) {
-  const {st, dec} = stateAt(i); const e = steps[i];
+function kbSlot(k) { return [ST.kb[0] + 24 + (k % 4) * 28, ST.kb[1] + 96 + Math.floor(k / 4) * 28]; }
+
+// where every token sits after event i
+function layout(i) {
+  const {st, dec} = stateAt(i); const occupancy = {}; const want = {};
+  const list = [...Object.values(st.tokens).map(t => ({...t, key:t.id})),
+                ...st.ghosts.map((g, n) => ({id:g.label, key:'ghost' + n, stage:g.stage, at:'queue', ghost:true}))];
+  let kbSeen = 0;
+  for (const t of list) {
+    occupancy[t.at] = occupancy[t.at] || 0;
+    const pos = t.at === 'kb' ? kbSlot(kbSeen++) : slot(t.at, occupancy[t.at]++);
+    want[t.key] = {pos, t};
+  }
+  return {st, dec, want};
+}
+const ease = p => p < .5 ? 2*p*p : 1 - Math.pow(-2*p + 2, 2)/2;
+let scene = null;   // {i, cur, prev}
+
+function drawTokens(p) {
+  const {cur, prev} = scene; const k = ease(p);
+  for (const key in tokenEl) if (!cur.want[key]) { tokenEl[key].remove(); delete tokenEl[key]; }
+  for (const key in cur.want) {
+    const {pos, t} = cur.want[key];
+    let g = tokenEl[key];
+    if (!g) {
+      g = mk('g', {class:'token' + (t.ghost ? ' ghost' : '')});
+      mk('circle', {r:TOKEN_R, fill:HUE[stageIdx(t.stage)]}, g);
+      const tx = mk('text', {}, g); tx.textContent = t.ghost ? '?' : t.id.replace('t00', '');
+      tokenEl[key] = g;
+    }
+    const from = prev.want[key] ? prev.want[key].pos : [ST.queue[0] - 10, pos[1]];
+    const lift = Math.sin(Math.PI * k) * (from[0] === pos[0] && from[1] === pos[1] ? 0 : 20);
+    g.setAttribute('transform', `translate(${from[0] + (pos[0] - from[0]) * k},${from[1] + (pos[1] - from[1]) * k - lift})`);
+    const small = t.at === 'kb';
+    g.firstChild.setAttribute('r', small ? KB_R : TOKEN_R);
+    g.lastChild.style.display = small ? 'none' : '';
+    g.setAttribute('class', 'token' + (t.ghost ? ' ghost' : ''));
+  }
+}
+function render(i) {
+  const cur = layout(i); const prev = i > 0 ? layout(i - 1) : cur;
+  const {st, dec} = cur; const e = steps[i];
+  scene = {i, cur, prev};
   Object.values(stationEl).forEach(g => g.setAttribute('class', 'station'));
   const hot = (k, cls) => stationEl[k] && stationEl[k].setAttribute('class', 'station hot ' + (cls||''));
   if (e.k === 'session') hot({worker:'worker', supervisor:'supervisor', curator:'curator', editor:'editor'}[e.role],
                               e.role === 'supervisor' ? (e.verdict === 'accept' ? 'good' : 'bad') : '');
   if (e.k === 'triage') hot(e.ok ? 'triage' : 'bin', e.ok ? 'good' : 'bad');
   if (e.k === 'task') hot('queue');
-  // stage bar
   stageEls.forEach((g, n) => {
     const s = STAGES[n]; const status = st.stage[s] || (st.active === s ? 'active' : '');
     g.setAttribute('class', 'stage ' + status);
     const gate = gateEls[n]; gate.setAttribute('class', 'gate ' + (st.stage[s] === 'done' ? 'ok' : st.stage[s] === 'fail' ? 'no' : ''));
   });
-  // tokens
-  const occupancy = {}; const want = {};
-  const list = [...Object.values(st.tokens).map(t => ({...t, key:t.id})),
-                ...st.ghosts.map((g, n) => ({id:g.label, key:'ghost' + n, stage:g.stage, at:'queue', ghost:true}))];
-  for (const t of list) {
-    const where = t.at === 'kb' ? 'kb' : t.at;
-    occupancy[where] = occupancy[where] || 0;
-    let pos = slot(where, occupancy[where]++);
-    if (where === 'kb') { const k = list.filter(u => u.at === 'kb' && u.key < t.key).length; pos = [ST.kb[0] + 22 + (k % 4) * 27, ST.kb[1] + 62 + Math.floor(k / 4) * 27]; }
-    want[t.key] = {pos, t};
-  }
-  for (const k in tokenEl) if (!want[k]) { tokenEl[k].remove(); delete tokenEl[k]; }
-  for (const k in want) {
-    const {pos, t} = want[k]; let g = tokenEl[k];
-    if (!g) {
-      g = mk('g', {class:'token' + (t.ghost ? ' ghost' : '')});
-      if (!animate) g.style.transition = 'none';
-      mk('circle', {r:t.at === 'kb' ? 10 : 15, fill:HUE[stageIdx(t.stage)]}, g);
-      const tx = mk('text', {}, g); tx.textContent = t.ghost ? '?' : t.id.replace('t00', '');
-      g.style.transform = `translate(${slot('queue', 0)[0]}px,${slot('queue', 0)[1]}px)`;
-      g.getBoundingClientRect(); tokenEl[k] = g;
-    }
-    g.style.transition = animate ? '' : 'none';
-    g.style.transform = `translate(${pos[0]}px,${pos[1]}px)`;
-    g.firstChild.setAttribute('r', t.at === 'kb' ? 10 : 15);
-    g.lastChild.style.display = t.at === 'kb' ? 'none' : '';
-    g.setAttribute('class', 'token' + (t.ghost ? ' ghost' : ''));
-  }
-  // dynamic decorations (only for the current step)
   dynLayer.replaceChildren();
   for (const d of dec) {
     if (d.t === 'bubble') bubble(d.at, d.kind, d.lines);
     if (d.t === 'chip') chip(d);
     if (d.t === 'gate') { const n = STAGES.indexOf(d.stage); const gx = 40 + n * 226 + 204;
       const b = mk('g', {class:'bubble ' + (d.ok ? 'good' : 'bad') + ' pop'}, dynLayer);
-      mk('rect', {x:gx - 44, y:96, width:96, height:26, rx:8}, b);
-      const tt = mk('text', {x:gx + 4, y:113, 'text-anchor':'middle'}, b); tt.textContent = d.ok ? 'gate PASS' : 'gate FAIL'; }
-    if (d.t === 'triage') {
-      const at = d.ok ? 'triage' : 'bin';
-      bubble(at, d.ok ? 'good' : 'warn', d.lines, true);
-      const c = mk('g', {class:'chip fly'}, dynLayer);
-      mk('rect', {x:ST.triage[0] - 4, y:ST.triage[1] + 44, width:ST.triage[2] + 8, height:24, rx:6}, c);
-      const tt = mk('text', {x:ST.triage[0] + ST.triage[2]/2, y:ST.triage[1] + 60, 'text-anchor':'middle'}, c); tt.textContent = d.text;
-    }
+      const bx = Math.min(gx - 48, 1194 - 104);
+      mk('rect', {x:bx, y:62, width:104, height:28, rx:8}, b);
+      const tt = mk('text', {x:bx + 52, y:81, 'text-anchor':'middle'}, b); tt.textContent = d.ok ? 'gate PASS' : 'gate FAIL'; }
+    if (d.t === 'triage') bubble(d.ok ? 'triage' : 'bin', d.ok ? 'good' : 'warn', d.lines);
   }
-  // rejected bin count and KB count badges
-  const badge = (k, txt) => { const [x, y, w] = ST[k]; const t = mk('text', {x:x + w - 10, y:y + 16, 'text-anchor':'end', 'font-size':13, 'font-weight':700, fill:'#6b7488'}, dynLayer); t.textContent = txt; };
+  const badge = (k, txt) => { const [x, y, w] = ST[k]; const t = mk('text', {x:x + w, y:y - 8, 'text-anchor':'end', 'font-size':15, 'font-weight':700, fill:'#6b7488'}, dynLayer); t.textContent = txt; };
   badge('bin', st.rej.length + ' rejected'); badge('kb', st.kb + ' entries');
-  // caption, counters, banner
   const [what, why] = caption(e, st);
   const cap = document.getElementById('caption'); cap.children[0].textContent = what; cap.children[1].textContent = why;
   const C = st.c; document.getElementById('counters').innerHTML =
@@ -344,17 +351,25 @@ function render(i, animate) {
   if (e.k === 'stop') ban.innerHTML = `<div class="card banner bad"><b>Stopped by a gate.</b> ${e.why}</div>`;
   document.getElementById('scrub').value = i;
 }
-function bubble(at, kind, lines, above) {
-  const [x, y, w, h] = ST[at]; const bw = 176, bh = 14 + lines.length * 16;
-  const bx = Math.max(6, Math.min(1194 - bw, x + w/2 - bw/2)); const by = above ? y - bh - 6 : (y > 400 ? y - bh - 6 : y + h + 8);
+// bubbles sit where they cannot cover a station: above the supervisor/editor/report, right of triage, below queue/worker
+function bubble(at, kind, lines) {
+  const [x, y, w, h] = ST[at]; const lh = 20;
+  const bw = Math.min(330, Math.max(...lines.map(l => l.length)) * 8.2 + 24), bh = 16 + lines.length * lh;
+  let bx, by;
+  if (at === 'triage' || at === 'bin') { bx = ST.triage[0] + ST.triage[2] + 40; by = ST.triage[1] - 6; }
+  else if (at === 'supervisor') { bx = x + w/2 - bw/2; by = y - bh - 10; }
+  else if (y > 400) { bx = x + w/2 - bw/2; by = y - bh - 10; }
+  else { bx = x + w/2 - bw/2; by = y + h + 10; }
+  bx = Math.max(6, Math.min(1194 - bw, bx));
   const g = mk('g', {class:'bubble ' + kind + ' pop'}, dynLayer);
-  mk('rect', {x:bx, y:by, width:bw, height:bh, rx:8}, g);
-  lines.forEach((ln, n) => { const t = mk('text', {x:bx + 9, y:by + 19 + n * 16}, g); t.textContent = ln; });
+  mk('rect', {x:bx, y:by, width:bw, height:bh, rx:10}, g);
+  lines.forEach((ln, n) => { const t = mk('text', {x:bx + 12, y:by + 26 + n * lh}, g); t.textContent = ln; });
 }
 function chip(d) {
-  const [x, y, w] = ST.sandbox; const g = mk('g', {class:'chip fly' + (d.err ? ' err' : ''), style:`animation-delay:${d.i * .25}s`}, dynLayer);
-  mk('rect', {x:x - 40, y:y + 46 + d.i * 24, width:w + 80, height:22, rx:6}, g);
-  const t = mk('text', {x:x + w/2, y:y + 61 + d.i * 24, 'text-anchor':'middle'}, g); t.textContent = d.text;
+  const [x, y, w, h] = ST.sandbox; const cw = Math.min(520, d.text.length * 7.8 + 22);
+  const g = mk('g', {class:'chip fly' + (d.err ? ' err' : ''), style:`animation-delay:${d.i * .25}s`}, dynLayer);
+  mk('rect', {x:x + w/2 - cw/2, y:y + h + 10 + d.i * 30, width:cw, height:26, rx:7}, g);
+  const t = mk('text', {x:x + w/2, y:y + h + 28 + d.i * 30, 'text-anchor':'middle'}, g); t.textContent = d.text;
 }
 
 // ---- ticks & controls -------------------------------------------------------------------
@@ -373,7 +388,16 @@ function buildTicks() {
 }
 let cur = 0, timer = null;
 const speedSel = document.getElementById('speed');
-function go(i, animate = true) { cur = Math.max(0, Math.min(steps.length - 1, i)); render(cur, animate); if (cur === steps.length - 1) stop(); }
+let raf = 0;
+function go(i, animate = true) {
+  cur = Math.max(0, Math.min(steps.length - 1, i)); cancelAnimationFrame(raf); render(cur);
+  if (animate && cur > 0) {
+    const t0 = performance.now(), ms = 900 / Math.max(1, parseFloat(speedSel.value));
+    const frame = now => { const p = Math.min(1, (now - t0) / ms); drawTokens(p); if (p < 1) raf = requestAnimationFrame(frame); };
+    drawTokens(0); raf = requestAnimationFrame(frame);
+  } else drawTokens(1);
+  if (cur === steps.length - 1) stop();
+}
 function tick() { if (cur >= steps.length - 1) return stop(); go(cur + 1); timer = setTimeout(tick, 1700 / parseFloat(speedSel.value)); }
 function play() { if (cur >= steps.length - 1) go(0, false); document.getElementById('play').textContent = 'Pause'; timer = setTimeout(tick, 300); }
 function stop() { clearTimeout(timer); timer = null; document.getElementById('play').textContent = 'Play'; }
@@ -391,7 +415,12 @@ document.getElementById('meta').textContent = D.meta.line;
 document.getElementById('scrub').max = steps.length - 1;
 build(); buildTicks();
 const hash = new URLSearchParams(location.hash.slice(1));
-if (hash.has('step')) go(+hash.get('step'), false);
+if (hash.has('step')) {
+  // capture mode (docs/assets/replay.gif): one frame of the move into step N, p = 0..1
+  document.body.classList.add('cap');
+  cur = +hash.get('step'); render(cur); const p = hash.has('p') ? +hash.get('p') : 1; drawTokens(p);
+  dynLayer.style.opacity = p < .35 ? 0 : 1;
+}
 else { go(0, false); if (!matchMedia('(prefers-reduced-motion: reduce)').matches) setTimeout(play, 700); }
 </script>
 </body>
