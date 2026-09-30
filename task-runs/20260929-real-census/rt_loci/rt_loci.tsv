@@ -1,0 +1,255 @@
+rt	record	organism	strand	rt_lo	rt_hi	upstream_nt	status	R	seed	delim_copies	delim_repeat	coding_repeat	rt_adjacent
+NP_042683.1	NC_001654.1	Jembrana disease virus	+	230	4527	229	not_assessed	0		0			
+YP_009664792.1	NC_043104.1	Spiraea yellow leafspot virus	+	1	1372	0	not_assessed	0		0			
+YP_009665179.1	NC_043194.1	Walleye epidermal hyperplasia virus 1	+	1	3603	0	not_assessed	0		0			
+YP_009665180.1	NC_043195.1	Walleye epidermal hyperplasia virus 2	+	1	3741	0	not_assessed	0		0			
+YP_009665181.1	NC_043196.1	Chick syncytial virus	+	1	1248	0	not_assessed	0		0			
+YP_009666126.1	NC_043445.1	Guenon simian foamy virus	+	3687	7118	3686	no_array	0		0			
+YP_009666308.1	NC_043491.1	Cladosporium fulvum T-1 virus	+	2327	5464	2326	no_array	0		0			
+YP_009666503.1	NC_043523.1	Angelica bushy stunt virus	+	3362	5473	3361	no_array	0		0			
+YP_009666826.1	NC_043534.1	Cacao swollen shoot Ghana M virus	+	1174	6669	1173	not_assessed	0		0			
+YP_009666830.1	NC_043535.1	Cacao swollen shoot Ghana Q virus	+	1062	6641	1061	not_assessed	0		0			
+YP_009553548.1	NC_040809.1	Cacao bacilliform Sri Lanka virus	+	1004	6322	1003	not_assessed	0		0			
+YP_009553041.1	NC_040692.1	Cacao swollen shoot CE virus	+	1343	6811	1342	array	3	AAAAGTACCCAGGA	0			
+YP_009553538.1	NC_040807.1	Cacao swollen shoot Ghana J virus	+	1098	6704	1097	not_assessed	0		0			
+YP_009553543.1	NC_040808.1	Cacao swollen shoot Ghana K virus	+	1095	6740	1094	not_assessed	0		0			
+YP_009551940.1	NC_040552.1	Cacao swollen shoot Ghana L virus	+	1067	6628	1066	not_assessed	0		0			
+YP_009552693.1	NC_040622.1	Cacao swollen shoot Ghana N virus	+	1092	6737	1091	not_assessed	0		0			
+YP_009553045.1	NC_040693.1	Cacao swollen shoot Ghana R virus	+	1070	6571	1069	not_assessed	0		0			
+YP_009552737.1	NC_040635.1	Birch leaf roll-associated virus	+	1390	7257	1389	not_assessed	0		0			
+YP_009553669.1	NC_040841.1	Pinus nigra virus 1	+	155	6544	154	not_assessed	0		0			
+YP_009553219.1	NC_040712.1	Dioscorea nummularia-associated virus	+	1611	6398	1610	no_array	0		0			
+YP_010085995.1	NC_055236.1	Aglaonema bacilliform virus	+	1133	6556	1132	not_assessed	0		0			
+YP_010086797.1	NC_055481.1	Grapevine badnavirus 1	+	814	6354	813	not_assessed	0		0			
+YP_010087614.1	NC_055562.1	Polyscias mosaic virus	+	1164	7136	1163	not_assessed	0		0			
+YP_010087856.1	NC_055598.1	Camellia lemon glow virus	+	1223	7759	1222	not_assessed	0		0			
+YP_010087922.1	NC_055603.1	Lymphocystis disease virus 4	+	68938	70392	6000	no_array	0		0			
+YP_010087807.1	NC_055588.1	Epiphyllum virus 4	+	3624	5582	3623	no_array	0		0			
+YP_010088024.1	NC_055604.1	Ivy ringspot-associated virus	+	1371	8417	1370	not_assessed	0		0			
+NP_542258.1	NC_003323.1	Primate T-lymphotropic virus 3	+	2393	5074	2392	no_array	0		0			
+NP_056803.1	NC_001364.1	Western chimpanzee simian foamy virus	+	3775	7215	3774	no_array	0		0			
+YP_009001626.1	NC_023426.1	Alphaentomopoxvirus acuprea	+	139572	140399	6000	no_array	0		0			
+YP_008004368.1	NC_021248.1	Choristoneura biennis entomopoxvirus	-	271942	273465	6000	no_array	0		0			
+NP_065042.1	NC_002520.1	Betaentomopoxvirus amoorei	-	214966	216480	6000	no_array	0		0			
+NP_048132.1	NC_001993.1	Melanoplus sanguinipes entomopoxvirus	+	59208	60803	6000	no_array	0		0			
+NP_758929.1	NC_004456.1	Vibrio phage VHML	+	29054	29965	6000	no_array	0		0			
+YP_073558.1	NC_005902.1	lymphocystis disease virus-China	-	37533	38984	6000	no_array	0		0			
+YP_009167727.1	NC_027981.1	Vibrio phage VP585	+	13317	14594	6000	no_array	0		0			
+YP_009168531.1	NC_027990.1	Lactobacillus phage LBR48	+	822	1886	821	not_assessed	0		0			
+YP_004306411.1	NC_015265.1	Burkholderia phage KS5	-	35144	36163	1073	not_assessed	0		0			
+YP_008004494.1	NC_021249.1	Choristoneura rosaceana entomopoxvirus 'L'	+	89609	91105	6000	no_array	0		0			
+YP_008004668.1	NC_021249.1	Choristoneura rosaceana entomopoxvirus 'L'	-	247846	249369	6000	no_array	0		0			
+YP_008003836.1	NC_021247.1	Adoxophyes honmai entomopoxvirus 'L'	-	12216	13067	6000	no_array	0		0			
+YP_008003940.1	NC_021247.1	Adoxophyes honmai entomopoxvirus 'L'	-	108126	109607	6000	no_array	0		0			
+YP_009276859.1	NC_030945.1	Bacillus phage BalMu-1	+	37310	38386	6000	no_array	0		0			
+YP_009207652.1	NC_028896.1	Escherichia phage pro147	-	22908	24098	6000	no_array	0		0			
+YP_009276424.1	NC_030940.1	Pseudomonas phage phi3	+	1071	2756	1070	not_assessed	0		0			
+YP_009342179.1	NC_033423.1	Lymphocystis disease virus Sa	-	117896	119359	6000	no_array	0		0			
+YP_009789834.1	NC_047818.1	Klebsiella phage 4LV2017	+	11959	12888	6000	no_array	0		0			
+YP_009797080.1	NC_047909.1	Faecalibacterium phage FP_Brigit	+	45723	46913	6000	no_array	0		0			
+YP_009797174.1	NC_047910.1	Faecalibacterium phage FP_Epona	+	41885	43039	6000	no_array	0		0			
+YP_009797219.1	NC_047911.1	Faecalibacterium phage FP_Lagaffe	+	23260	24573	6000	no_array	0		0			
+YP_009797349.1	NC_047913.1	Faecalibacterium phage FP_Mushu	+	33078	34331	6000	no_array	0		0			
+YP_009797423.1	NC_047914.1	Faecalibacterium phage FP_Taranis	+	46917	48098	6000	no_array	0		0			
+YP_009797518.1	NC_047915.1	Faecalibacterium phage FP_Toutatis	+	49347	50576	6000	no_array	0		0			
+YP_009855858.1	NC_048848.1	Butyrivibrio phage Arawn	+	15859	17004	6000	no_array	0		0			
+YP_010110233.1	NC_055868.1	uncultured phage cr50_1	-	97230	98270	556	not_assessed	0		0			
+YP_010110324.1	NC_055869.1	uncultured phage cr55_1	-	87749	89074	6000	no_array	0		0			
+YP_010110885.1	NC_055875.1	uncultured phage cr10_1	+	64930	65970	6000	no_array	0		0			
+YP_010112091.1	NC_055888.1	uncultured phage cr52_1	+	26623	27648	6000	no_array	0		0			
+YP_010112204.1	NC_055889.1	uncultured phage cr53_1	+	37828	38850	6000	no_array	0		0			
+YP_010112308.1	NC_055890.1	uncultured phage cr56_1	-	59433	60440	6000	no_array	0		0			
+YP_010112411.1	NC_055891.1	uncultured phage cr60_1	+	60761	61786	6000	no_array	0		0			
+YP_010112722.1	NC_055894.1	uncultured phage cr6_1	-	94135	95163	2259	no_array	0		0			
+YP_010112728.1	NC_055895.1	uncultured phage cr7_1	-	4850	5809	6000	no_array	0		0			
+YP_010113075.1	NC_055898.1	uncultured phage cr115_1	-	98378	99400	448	not_assessed	0		0			
+YP_010113293.1	NC_055901.1	uncultured phage cr130_1	-	62009	62824	6000	no_array	0		0			
+YP_009877209.1	NC_049386.1	Peduovirus P22H1	+	29920	30870	6000	no_array	0		0			
+NP_958675.1	NC_005357.1	Bordetella phage BPP-1	-	1756	2742	6000	no_array	0		5	CGCGAACATC	True	False
+YP_010510295.1	NC_067217.1	uncultured phage cr35_1	+	62914	63942	6000	no_array	0		0			
+YP_010509574.1	NC_067210.1	uncultured phage cr12_1	+	225	1253	224	not_assessed	0		0			
+YP_010509859.1	NC_067213.1	uncultured phage cr150_1	+	393	1415	392	not_assessed	0		0			
+YP_010510126.1	NC_067216.1	uncultured phage cr16_1	+	302	1327	301	not_assessed	0		0			
+YP_010509722.1	NC_067211.1	uncultured phage cr105_1	-	61345	62379	6000	no_array	0		0			
+YP_010510042.1	NC_067214.1	uncultured phage cr82_1	-	100666	101691	409	not_assessed	0		0			
+YP_010510363.1	NC_067218.1	uncultured phage cr23_1	-	60268	61275	6000	no_array	0		0			
+YP_010509812.1	NC_067212.1	uncultured phage cr19_1	-	57699	58721	6000	no_array	0		0			
+YP_010359329.1	NC_062772.1	uncultured phage cr77_1	-	30191	31471	6000	no_array	0		0			
+YP_010358687.1	NC_062765.1	uncultured phage cr30_1	+	29388	30428	6000	no_array	0		0			
+YP_010358887.1	NC_062767.1	uncultured phage cr149_1	+	38677	39915	6000	no_array	0		0			
+YP_010668140.1	NC_070954.1	Burkholderia phage Magia	-	30594	31877	6000	no_array	0		0			
+YP_010664295.1	NC_070915.1	Yersinia phage vB_YenM_56.17	+	19895	20827	6000	no_array	0		0			
+YP_010681680.1	NC_071050.1	Bacillus phage vB_BsuS_PJN02	-	67110	68138	6000	no_array	0		0			
+YP_002117531.1	NC_011097.2	Cycad leaf necrosis virus	+	1629	7379	1628	no_array	0		0			
+YP_010771262.1	NC_074535.1	ssRNA phage Esthiorhiza.4_12	+	2349	4289	2348	no_array	0		0			
+YP_010770263.1	NC_074213.1	ssRNA phage Esthiorhiza.4_6	+	1886	3796	1885	no_array	0		0			
+YP_010771118.1	NC_074491.1	ssRNA phage Gerhypos.1_24	+	2016	3818	2015	no_array	0		0			
+YP_010770980.1	NC_074450.1	ssRNA phage Gerhypos.1_37	+	2114	3964	2113	no_array	0		0			
+YP_010771227.1	NC_074525.1	ssRNA phage Gerhypos.1_6	+	2595	4463	2594	no_array	0		0			
+YP_010771265.1	NC_074536.1	ssRNA phage Gerhypos.2_3	+	2145	4010	2144	no_array	0		0			
+YP_010771272.1	NC_074538.1	ssRNA phage Gerhypos.2_40	+	2211	4064	2210	no_array	0		0			
+YP_010771269.1	NC_074537.1	ssRNA phage Gerhypos.3_15	+	2421	4319	2420	no_array	0		0			
+YP_010771278.1	NC_074540.1	ssRNA phage Gerhypos.4_19	+	2071	3930	2070	no_array	0		0			
+YP_010771127.1	NC_074494.1	ssRNA phage SRR6255746_3	+	1712	3493	1711	no_array	0		0			
+YP_010771304.1	NC_074548.1	ssRNA phage SRR7976325_24	+	1959	3947	1958	no_array	0		0			
+YP_010770179.1	NC_074187.1	ssRNA phage SRR7976325_4	+	2037	4007	2036	no_array	0		0			
+YP_010771124.1	NC_074493.1	ssRNA phage Zoerhiza.1_19	+	1868	3685	1867	no_array	0		0			
+YP_010771288.1	NC_074543.1	ssRNA phage Zoerhiza.2_21	+	2121	3974	2120	no_array	0		0			
+YP_010770341.1	NC_074238.1	ssRNA phage Zoerhiza.4_8	+	2087	3934	2086	no_array	0		0			
+YP_010790446.1	NC_075430.1	Dioscorea bacilliform virus	+	1632	7649	1631	no_array	0		0			
+YP_010790449.1	NC_075431.1	Dioscorea bacilliform virus	+	1589	7429	1588	no_array	0		0			
+YP_010796766.1	NC_076102.1	Diachasmimorpha longicaudata entomopoxvirus	-	23797	24984	6000	array	4	TTATTTGACTTATT	12	GACTTGTT	False	True
+YP_010799173.1	NC_076568.1	Buergenerula spartinae mitovirus 1	+	176	2605	175	not_assessed	0		0			
+YP_010797564.1	NC_076205.1	Dioscorea bacilliform RT virus	+	1410	7124	1409	not_assessed	0		0			
+YP_010796654.1	NC_076048.1	Cacao swollen shoot Togo A virus	+	1275	6881	1274	not_assessed	0		0			
+YP_010778573.1	NC_075036.1	Bodo saltans virus	-	835866	838415	6000	no_array	0		0			
+YP_010799405.1	NC_076651.1	Nigrospora oryzae mitovirus 2	+	301	2415	300	not_assessed	0		0			
+YP_010796425.1	NC_076023.1	Codonopsis vein clearing virus	+	1518	7685	1517	no_array	0		0			
+YP_010797894.1	NC_076247.1	Epiphyllum badnavirus 1	+	1129	7137	1128	not_assessed	0		0			
+YP_010799929.1	NC_076704.1	Entomophthora muscae mitovirus 6	+	106	2232	105	not_assessed	0		0			
+YP_010799265.1	NC_076606.1	Aucuba ringspot virus	+	1510	8277	1509	no_array	0		0			
+YP_010800292.1	NC_076824.1	Fusarium oxysporum f. sp. dianthi mitovirus 1	+	173	2200	172	not_assessed	0		0			
+YP_010803941.1	NC_077067.1	Fadolivirus algeromassiliense	+	1187030	1188940	6000	array	4	GAAGGCCCAGAAGG	0			
+YP_010800602.1	NC_076885.1	Chestnut mosaic virus	+	1163	6721	1162	not_assessed	0		0			
+YP_010798182.1	NC_076349.1	Green Sichuan pepper vein clearing-associated virus	+	1365	7538	1364	not_assessed	0		0			
+YP_010804325.1	NC_077070.1	Agapanthus tungrovirus	+	970	5868	969	not_assessed	0		0			
+YP_010805169.1	NC_077108.1	Metaplexis yellow mottle-associated virus	+	3384	5528	3383	no_array	0		0			
+YP_010805662.1	NC_077165.1	Chinaberry tree badnavirus 1	+	1071	6647	1070	not_assessed	0		0			
+YP_010771121.1	NC_074492.1	ssRNA phage Gerhypos.3_14	+	1729	3525	1728	no_array	0		0			
+YP_011108917.1	NC_092586.1	Caudoviricetes sp. vir215	+	30027	31061	6000	no_array	0		0			
+YP_013607429.1	NC_135452.1	Satomivirus wayo	+	53738	54868	6000	no_array	0		0			
+YP_010790456.1	NC_075434.1	Simiispumavirus macfas	+	3625	7071	3624	no_array	0		0			
+YP_013613461.1	NC_141872.1	Totsukavirus waseda	+	39131	40426	6000	no_array	0		0			
+YP_009243641.1	NC_029852.1	Bovine retrovirus CH15	+	2547	5108	2546	no_array	0		0			
+YP_009254008.1	NC_030205.1	Water chestnut soymovirus 1	+	2065	4107	2064	no_array	0		0			
+YP_009140788.1	NC_027131.1	Grapevine Roditis leaf discoloration-associated virus	+	1049	6541	1048	not_assessed	0		0			
+YP_009165750.1	NC_027924.1	Atractylodes mild mottle virus	+	3442	5481	3441	no_array	0		0			
+YP_009165599.1	NC_027922.1	White sucker hepatitis B virus	+	170	2536	169	not_assessed	0		0			
+YP_009182100.1	NC_028462.1	Vaccinivirus cadovaccinii	+	693	8486	692	not_assessed	0		0			
+YP_009229919.1	NC_029303.1	Blackberry virus F	+	1343	7189	1342	not_assessed	0		0			
+YP_009345075.1	NC_033739.1	Cacao yellow vein banding virus	+	1212	7088	1211	not_assessed	0		0			
+YP_009345071.1	NC_033738.1	Cacao mild mosaic virus	+	1101	6989	1100	not_assessed	0		0			
+YP_006495799.1	NC_018105.1	Gooseberry vein banding associated virus	+	1468	7200	1467	not_assessed	0		0			
+YP_009352866.1	NC_034252.1	Wisteria badnavirus 1	+	1102	6831	1101	not_assessed	0		0			
+YP_009259698.1	NC_030462.1	Canna yellow mottle associated virus	+	1491	6545	1490	not_assessed	0		0			
+YP_009305201.1	NC_031326.1	Simian retrovirus 8	+	3207	5807	3206	no_array	0		0			
+YP_009002585.1	NC_023485.1	Hibiscus bacilliform virus GD1	+	1092	6770	1091	not_assessed	0		0			
+YP_006607892.1	NC_018505.1	Soybean Putnam virus	+	3806	5905	3805	no_array	0		0			
+YP_009465717.1	NC_037056.1	Erysiphe necator mitovirus 3	+	434	2491	433	not_assessed	0		0			
+YP_006732334.1	NC_018616.1	Dahlia mosaic virus	+	3304	5133	3303	no_array	0		0			
+YP_009408594.1	NC_035472.1	Jujube mosaic-associated virus	+	1947	6740	1946	no_array	0		0			
+YP_006907834.1	NC_018858.1	Horseradish latent virus	+	3479	5518	3478	no_array	0		0			
+YP_009041481.1	NC_024301.1	Pagoda yellow mosaic associated virus	+	1108	6915	1107	not_assessed	0		0			
+YP_007761644.1	NC_020999.1	Rose yellow vein virus	+	3600	6059	3599	no_array	0		0			
+YP_008567619.1	NC_022365.1	Piper yellow mottle virus	+	1537	7314	1536	no_array	0		0			
+YP_009109689.1	NC_022517.1	Baboon endogenous virus strain M7	+	985	6168	984	not_assessed	0		0			
+YP_009113237.2	NC_026020.2	Mulberry badnavirus 1	+	404	6403	403	not_assessed	0		0			
+YP_009116631.1	NC_026238.1	Rubus yellow net virus	+	1431	7361	1430	not_assessed	0		0			
+YP_009121747.1	NC_026472.1	Yacon necrotic mottle virus	+	1144	7239	1143	not_assessed	0		0			
+YP_009130664.1	NC_026819.1	Taro bacilliform CH virus	+	1198	6609	1197	not_assessed	0		0			
+YP_008992013.1	NC_023153.1	Citrus endogenous pararetrovirus	+	131	5569	130	not_assessed	0		0			
+YP_595725.1	NC_008017.1	Sugarcane bacilliform MO virus	+	1536	7151	1535	no_array	0		0			
+NP_040550.1	NC_001408.1	Avian leukosis virus - RSA	+	2495	5182	2494	no_array	0		0			
+NP_569153.1	NC_003382.1	Citrus yellow mosaic virus	+	1069	7020	1068	not_assessed	0		0			
+YP_605811.1	NC_008018.1	Banana streak virus Acuminata Yunnan	+	1591	7293	1590	no_array	0		0			
+NP_056790.1	NC_001885.3	Gibbon ape leukemia virus	+	2194	5691	2193	no_array	0		0			
+YP_224289.1	NC_006955.1	Banana streak MY virus	+	1490	7099	1489	not_assessed	0		0			
+NP_569150.1	NC_003381.1	Banana streak OL virus	+	1451	6949	1450	not_assessed	0		0			
+YP_001497148.1	NC_009889.1	RD114 retrovirus	+	947	6166	946	not_assessed	0		0			
+YP_003208050.1	NC_013262.1	Pelargonium vein banding virus	+	1240	7152	1239	not_assessed	0		0			
+YP_001036293.1	NC_009010.1	Dioscorea bacilliform virus	+	1246	6909	1245	not_assessed	0		0			
+YP_006273075.1	NC_017830.1	Fig badnavirus 1	+	1049	6562	1048	not_assessed	0		0			
+YP_004581513.1	NC_015655.1	Sweet potato pakakuy virus	+	5116	7500	5115	no_array	0		0			
+NP_056895.1	NC_001414.1	Bovine leukemia virus	+	418	4669	417	not_assessed	0		0			
+YP_002822229.1	NC_012585.1	Thielaviopsis basicola mitovirus	+	427	2544	426	not_assessed	0		0			
+NP_612577.1	NC_003498.1	Carnation etched ring virus	+	3353	5332	3352	no_array	0		0			
+NP_619548.1	NC_003554.1	Figwort mosaic virus	+	3248	5248	3247	no_array	0		0			
+YP_223871.1	NC_006934.1	Reticuloendotheliosis virus	+	2444	6025	2443	no_array	0		0			
+NP_039820.1	NC_001343.1	Commelina yellow mottle virus	+	1506	7166	1505	no_array	0		0			
+NP_041003.3	NC_001488.1	Human T-lymphotropic virus 2	+	2239	5187	2238	no_array	0		0			
+YP_001931961.1	NC_010737.1	Lamium leaf distortion virus	+	3325	5415	3324	no_array	0		0			
+YP_001931967.1	NC_010738.1	Eupatorium vein clearing virus	+	3432	5456	3431	no_array	0		0			
+YP_003284237.1	NC_013455.1	Sugarcane bacilliform Guadeloupe D virus	+	1455	6833	1454	not_assessed	0		0			
+NP_056886.1	NC_001407.1	Rous sarcoma virus	+	380	5190	379	not_assessed	0		0			
+NP_056907.1	NC_001815.1	Simian T-lymphotropic virus 2	+	756	5160	755	not_assessed	0		0			
+NP_758808.1	NC_004450.1	Taro bacilliform virus	+	1227	6872	1226	not_assessed	0		0			
+NP_687035.1	NC_001549.1	Simian immunodeficiency virus	+	897	5314	896	not_assessed	0		0			
+NP_041734.1	NC_001574.1	Cacao swollen shoot virus	+	1272	6776	1271	not_assessed	0		0			
+YP_004732983.2	NC_015784.2	Grapevine vein clearing virus	+	1495	7320	1494	not_assessed	0		0			
+NP_569141.1	NC_003378.1	Tobacco vein clearing virus	+	3411	5318	3410	no_array	0		0			
+NP_054716.1	NC_002201.1	Equine foamy virus	+	3157	6618	3156	no_array	0		0			
+NP_056848.1	NC_001648.1	Cassava vein mosaic virus	+	4344	6302	4343	no_array	0		0			
+YP_002321513.1	NC_011592.1	Bougainvillea chlorotic vein banding virus	+	1345	8103	1344	not_assessed	0		0			
+NP_056728.1	NC_001497.2	Cauliflower mosaic virus	+	3634	5673	3633	no_array	0		0			
+NP_663784.1	NC_001722.1	Human immunodeficiency virus 2	+	1103	5754	1102	not_assessed	0		0			
+YP_003864102.1	NC_014474.1	Simian retrovirus 4	+	3207	5819	3206	no_array	0		0			
+NP_040840.1	NC_001452.1	Visna-maedi virus	+	1703	5008	1702	no_array	0		0			
+NP_777317.1	NC_004540.1	Badnavirus maculakalanchoes	+	1384	7209	1383	not_assessed	0		0			
+NP_862833.2	NC_004994.2	Enzootic nasal tumor virus 2	+	2822	5434	2821	no_array	0		0			
+NP_758887.1	NC_004455.1	Simian immunodeficiency virus SIV-mnd 2	+	2050	5082	2049	no_array	0		0			
+NP_068729.1	NC_001739.2	Soybean chlorotic mottle virus	+	2539	4617	2538	no_array	0		0			
+NP_044929.1	NC_001831.1	Bovine foamy virus	+	2998	6660	2997	no_array	0		0			
+NP_057933.2	NC_001501.1	Moloney murine leukemia virus	+	357	5573	356	not_assessed	0		0			
+NP_047255.1	NC_001940.1	Feline leukemia virus	+	685	6045	684	not_assessed	0		0			
+YP_002308474.1	NC_011546.1	Simian T-cell lymphotropic virus 6	+	2416	5061	2415	no_array	0		0			
+NP_127504.1	NC_001839.2	Petunia vein clearing virus	+	51	6590	50	not_assessed	0		0			
+NP_040333.1	NC_001362.1	Friend murine leukemia virus	+	2221	5835	2220	no_array	0		0			
+YP_004347415.1	NC_015328.1	Sweet potato collusive virus	+	3842	5767	3841	no_array	0		0			
+NP_040563.1	NC_001413.1	Bovine immunodeficiency virus	+	1572	4742	1571	no_array	0		0			
+NP_056880.1	NC_001503.1	Mouse mammary tumor virus	+	313	5578	312	not_assessed	0		0			
+YP_009268869.1	NC_001511.1	Ovine lentivirus	+	1791	5051	1790	no_array	0		0			
+YP_002519387.1	NC_011920.1	Rudbeckia flower distortion virus	+	3557	5662	3556	no_array	0		0			
+NP_040939.1	NC_001463.1	Caprine arthritis encephalitis virus	+	1729	5046	1728	no_array	0		0			
+NP_056891.1	NC_001550.1	Mason-Pfizer monkey virus	+	269	5582	268	not_assessed	0		0			
+YP_004442824.1	NC_015502.1	Banana streak UA virus	+	1402	7038	1401	not_assessed	0		0			
+YP_004442827.1	NC_015503.1	Banana streak UI virus	+	1395	6908	1394	not_assessed	0		0			
+YP_004442833.1	NC_015505.1	Banana streak UM virus	+	1497	7043	1496	not_assessed	0		0			
+YP_004442839.1	NC_015507.1	Banana streak IM virus	+	1590	7202	1589	no_array	0		0			
+YP_001956722.2	NC_010820.1	African green monkey simian foamy virus	+	3704	7135	3703	no_array	0		0			
+YP_002916057.1	NC_012728.1	Sweet potato badnavirus B	+	5166	7481	5165	no_array	0		0			
+NP_056762.1	NC_001914.1	Rice tungro bacilliform virus	+	994	6021	993	not_assessed	0		0			
+NP_057860.1	NC_001436.1	Human T-cell leukemia virus type I	+	450	4836	449	not_assessed	0		0			
+NP_861410.1	NC_004324.3	Cestrum yellow leaf curling virus	+	2573	4504	2572	no_array	0		0			
+YP_610965.1	NC_008034.1	Dracaena mottle virus	+	1147	6897	1146	not_assessed	0		0			
+YP_002455786.1	NC_011800.1	Human T-lymphotropic virus 4	+	2383	5109	2382	no_array	0		0			
+YP_004442836.1	NC_015506.1	Banana streak CA virus	+	1446	6956	1445	not_assessed	0		0			
+YP_003987465.1	NC_014648.1	Pineapple bacilliform CO virus	+	1335	7058	1334	not_assessed	0		0			
+YP_004442830.1	NC_015504.1	Banana streak UL virus	+	1430	6931	1429	not_assessed	0		0			
+NP_395469.1	NC_003138.2	Blueberry red ringspot virus	+	2584	4557	2583	no_array	0		0			
+YP_233107.1	NC_007002.1	Banana streak GF virus	+	1343	6841	1342	not_assessed	0		0			
+NP_040973.1	NC_001482.1	Feline immunodeficiency virus	+	2251	5243	2250	no_array	0		0			
+NP_057849.4	NC_001802.1	Human immunodeficiency virus 1	+	336	4642	335	not_assessed	0		0			
+NP_045937.2	NC_001867.1	Walleye dermal sarcoma virus	+	800	6058	799	not_assessed	0		0			
+YP_004300274.1	NC_015228.1	Sweet potato vein clearing virus	+	5060	6919	5059	array	3	AAAAAGAATTAGAA	0			
+NP_149413.1	NC_003031.1	Sugarcane bacilliform IM virus	+	1544	7282	1543	no_array	0		0			
+NP_659397.1	NC_004036.1	Mirabilis mosaic virus	+	3356	5380	3355	no_array	0		0			
+YP_443922.1	NC_007654.1	Atlantic salmon swim bladder sarcoma virus	+	1047	7487	1046	not_assessed	0		4	GAATGAGGAA	False	True
+NP_041186.1	NC_001494.1	Jaagsiekte sheep retrovirus	+	3108	5441	3107	no_array	0		0			
+YP_004222728.1	NC_015116.1	Avian leukemia virus	+	2716	5337	2715	no_array	0		0			
+NP_041261.1	NC_001514.1	Squirrel monkey retrovirus	+	3888	6284	3887	no_array	0		0			
+YP_241114.1	NC_007015.1	Ovine enzootic nasal tumor virus	+	2825	5437	2824	no_array	0		0			
+NP_043924.1	NC_001724.1	Snakehead retrovirus	+	337	6390	336	not_assessed	0		0			
+NP_043933.1	NC_001725.1	Strawberry vein banding virus	+	3406	5532	3405	no_array	0		0			
+YP_233110.1	NC_007003.1	Banana streak VN virus	+	1682	7378	1681	no_array	0		0			
+YP_009506251.1	NC_038378.1	Cacao swollen shoot CD virus	+	1152	6770	1151	not_assessed	0		0			
+YP_009506264.1	NC_038380.1	Canna yellow mottle virus	+	1461	6677	1460	not_assessed	0		0			
+YP_009506267.1	NC_038381.1	Dioscorea bacilliform AL virus	+	1408	7152	1407	not_assessed	0		0			
+YP_009506270.1	NC_038382.1	Sugarcane bacilliform Guadeloupe A virus	+	1475	6835	1474	not_assessed	0		0			
+YP_009507248.1	NC_038512.1	Trichoplusia ni TED virus	+	2306	5560	2305	no_array	0		0			
+YP_009507791.1	NC_038669.1	Puma lentivirus 14	+	2199	5459	2198	no_array	0		0			
+YP_009508408.1	NC_038986.1	Dioscorea bacilliform RT virus 1	+	1369	7128	1368	not_assessed	0		0			
+YP_009508411.1	NC_038987.1	Dioscorea bacilliform RT virus 2	+	1180	6861	1179	not_assessed	0		0			
+YP_009508443.1	NC_038995.1	Dioscorea bacilliform TR virus	+	1240	6933	1239	not_assessed	0		0			
+YP_009508537.1	NC_039022.1	Puma feline foamy virus	+	2904	6374	2903	no_array	0		0			
+YP_009508546.1	NC_039024.1	Central chimpanzee simian foamy virus	+	3759	7190	3758	no_array	0		0			
+YP_009508551.1	NC_039025.1	Eastern chimpanzee simian foamy virus	+	3119	6550	3118	no_array	0		0			
+YP_009508556.1	NC_039026.1	Japanese macaque simian foamy virus	+	3634	7083	3633	no_array	0		0			
+YP_009508561.1	NC_039027.1	Spider monkey simian foamy virus	+	3181	6627	3180	no_array	0		0			
+YP_009508566.1	NC_039028.1	Squirrel monkey simian foamy virus	+	2822	6226	2821	no_array	0		0			
+YP_009508571.1	NC_039029.1	Western lowland gorilla simian foamy virus	+	3262	6687	3261	no_array	0		0			
+YP_009508577.1	NC_039030.1	White-tufted-ear marmoset simian foamy virus	+	2949	6398	2948	no_array	0		0			
+YP_009508582.1	NC_039031.1	Yellow-breasted capuchin simian foamy virus	+	2964	6413	2963	no_array	0		0			
+YP_009508888.1	NC_039085.1	Simian foamy virus Pongo pygmaeus pygmaeus	+	3547	6984	3546	no_array	0		0			
+YP_009513211.1	NC_039228.1	Koala retrovirus	+	2641	6024	2640	no_array	0		0			
+YP_009513242.1	NC_039238.1	Rhesus macaque simian foamy virus	+	3634	7083	3633	no_array	0		0			
+YP_009513249.1	NC_039242.1	Feline foamy virus	+	2937	6407	2936	no_array	0		0			

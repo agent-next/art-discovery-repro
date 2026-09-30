@@ -4,8 +4,19 @@ Host: `agent-dev-01` (16 vCPU, 62 GB, shared 309 GB disk, other lanes use 91-100
 Tools from micromamba env `art`: HMMER 3.4, MMseqs2, Bowtie2, SAMtools, subread
 (featureCounts), fastp 1.3.7, sra-tools 3.4.1. Repo at `main` after PRs #24-#27.
 
-Raw outputs live on the box (`~/runs/real/`) and are not committed (GBs); the numbers
-below are copied from them.
+Every small output is committed next to this file; only the multi-GB inputs (RefSeq
+protein/GenBank flat files, FASTQ, BAMs) stay on the box and are re-downloadable.
+
+| path | content |
+| --- | --- |
+| `commands/` | the exact wrapper scripts run on the box (`census.sh`, `rnaseq.sh`, `rnaseq326.sh`, `scan.sh`) |
+| `census/` | `hmmsearch.domtblout`, `retained.ids` (271), `retained2.ids` (271, after the PR #24 fix), `filtered.faa`, `clu_rep_seq.fasta` (117), `clu_cluster.tsv` |
+| `controls/` | control sequences (UniProt) and their domtblout / retained lists |
+| `rnaseq/` | `features.gtf` (260 rows), `PRJNA836150.accessions`, `tpm_all.tsv` (fragments and TPM per feature for the 3 libraries run) |
+| `rt_loci/rt_loci.tsv` | per-locus scan result (254 rows) |
+
+Pfam profiles used (public, download from InterPro): PF00078 RVT_1, PF07727 RVT_2,
+PF13456 RVT_3, PF13655 RVT_N, PF08388 GIIM, PF01348 Intron_maturas2.
 
 ## 1. Census subset (steps 01-03) on RefSeq viral proteins
 
