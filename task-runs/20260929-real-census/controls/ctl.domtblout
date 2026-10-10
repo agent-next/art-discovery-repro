@@ -34,6 +34,5 @@ sp|P0A3U1|LTRA_LACLM -            599 GIIM                 PF08388.17    80   6.
 # Query file:      ../data/hmm/rt_pfam6.hmm
 # Target file:     controls.faa
 # Option settings: hmmsearch --domtblout ctl.domtblout --noali -E 0.01 --domE 0.01 -Z 8 --domZ 8 ../data/hmm/rt_pfam6.hmm controls.faa 
-# Current dir:     /home/robot/runs/real/controls
 # Date:            Tue Sep 29 17:12:34 2026
 # [ok]

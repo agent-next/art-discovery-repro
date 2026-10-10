@@ -1,5 +1,4 @@
-export MAMBA_ROOT_PREFIX=~/tools/mamba
-eval "$(~/tools/mm/bin/micromamba shell hook -s bash)"; micromamba activate art
-cd ~/runs/art-harness-20260929
-time python3 scripts/scan_rt_loci.py ~/runs/real/results/census/retained2.ids ~/runs/real/data/seq/viral.1.genomic.gbff.gz -o ~/runs/real/results/rt_loci.tsv -j 6
+REPO=${REPO:?repo checkout}; DATA=${DATA:?data root}; cd "$REPO"
+micromamba activate art
+time python3 scripts/scan_rt_loci.py "$DATA/results/census/retained2.ids" "$DATA/data/seq/viral.1.genomic.gbff.gz" -o "$DATA/results/rt_loci.tsv" -j 6
 echo SCAN_DONE

@@ -32,4 +32,4 @@ INPUTS    github.com/agent-next/art-harness default branch main. Python >= 3.11.
 VERIFY-BY In your clone: `make check` exits 0; `python -m pytest -q` all pass; `bash pipeline/census/01_hmmsearch.sh --dry-run` prints the exact hmmsearch command; `python -m benchmark.run_benchmark --help` works. Paste real command output.
 OUTPUT    Receipt: files changed, test output, dry-run outputs, PR URL. End with GOAL_COMPLETE, GOAL_BLOCKED, or GOAL_NEEDS_INPUT.
 
-You ARE Devin. Use run_subagent with profiles explore/builder/tester/verifier for parallel disjoint work. Never profile subagent_explore. Do not exec ccz/grok/cx/devin.
+You ARE Devin. Use run_subagent with profiles explore/builder/tester/verifier for parallel disjoint work. Never profile subagent_explore.

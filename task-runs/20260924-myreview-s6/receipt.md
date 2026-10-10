@@ -8,7 +8,7 @@ Merge stays owner-gated.
 
 - **S0 preflight**: tests green at start (131), ruff clean, secrets scan clean,
   ref pinned. Skiplists seeded into REVIEW.md.
-- **S1 finders (4 fleets)**: Devin parent with 4 native subagent angles (A-D) +
+- **S1 finders (4 groups)**: one parent agent with 4 native subagent angles (A-D) +
   3 in-session finder agents (same angles) for cross-family coverage.
   ~50 findings; full report `../20260924-myreview-s1/findings-report.md`
   (A1-A17, B1-B11, C1-C15, D1-D9), dispatch prompt `../20260924-myreview-s1/prompt.txt`.
@@ -57,11 +57,11 @@ Merge stays owner-gated.
 
 | Vote | Model | Method | Verdict |
 | --- | --- | --- | --- |
-| Independent reviewer | grok-4.7 (reviewer lane, lanes.tsv) | execution: make check + per-finding probes + revert-based power proofs | S3: FIX-FIRST -> S4: FIX-FIRST -> S4' (a151775): **SHIP** |
+| Independent reviewer | grok-4.7 (a different engine than the writer's) | execution: make check + per-finding probes + revert-based power proofs | S3: FIX-FIRST -> S4: FIX-FIRST -> S4' (a151775): **SHIP** |
 | Session model (this agent) | Claude (session) | execution: closing `make check` 169 passed + ruff clean on a151775; every finding re-derived from source before fixing; per-finding probes in the suite | **SHIP** |
 
 Writer != reviewer holds: the S2 fixes were written by the session agent; the
-S3/S4 votes are grok. The S1 findings were produced by Devin + in-session
+S3/S4 votes are grok. The S1 findings were produced by the parent agent + in-session
 subagents (sonnet) and adjudicated by the session model against source.
 
 ## Negative claims and power
@@ -73,7 +73,7 @@ subagents (sonnet) and adjudicated by the session model against source.
 
 ## Skips with rationale
 
-- gpt6pro research lane: upstream timeouts during the earlier fact round
+- gpt6pro research route: upstream timeouts during the earlier fact round
   (recorded in task-runs/20260924-devin-build/gpt6pro-failed-run.log) — not
   re-attempted for review (its role here would duplicate finder coverage).
 - Devin minors judged instrument-and-interpretation findings (B7 family

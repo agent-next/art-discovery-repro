@@ -9,4 +9,4 @@ INPUTS    This repo checkout. Paper context lives in docs/paper-notes.md (trust 
 VERIFY-BY Run `make check` once yourself (expect 127 passed) to prove you reviewed a green tree; paste the tail.
 OUTPUT    Four labeled finding lists (A-D), each possibly empty. End with GOAL_COMPLETE or GOAL_BLOCKED.
 
-You ARE Devin. Use run_subagent with reviewer/explore profiles for the four angles in parallel. Do not exec ccz/grok/cx/devin.
+Run the four angles as parallel subagents on reviewer/explore profiles.

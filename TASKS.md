@@ -16,15 +16,13 @@ real blocker is hit; every blocker has a WHY/HOW/WHAT entry in REPRODUCTION.md �
 - [x] Stage gates evaluate after each stage's work; follow-up dedupe; eval removed from pipeline wrappers
 
 ## Open
-- [x] Real-data runs on agent-dev-01: MarsHill scan, census steps 01-03 (RefSeq viral), RT-locus
+- [x] Real-data runs: MarsHill scan, census steps 01-03 (RefSeq viral), RT-locus
       scan, RNA-seq reanalysis of 3 of 12 libraries (`task-runs/20260929-real-census/`)
 - [ ] RNA-seq: remaining 9 libraries on a dedicated volume; explain 4.5%/3.8% vs the paper's 8% (GAP-11)
 - [ ] Live pilot: 1–2 tasks through the stage chain + L1 benchmark with a token cap
-      (owner decision: budget, model = Fable 5 in place of Mythos 5)
+      (owner decision: budget and model)
 - [ ] Rename the local checkout directory `art-harness` → `art-discovery-repro` from a fresh session
 - [ ] Owner closeout report (goal-html-report)
-
-State and next steps for the next agent: `docs/HANDOFF.md`.
 
 ## Blockers ledger
 See REPRODUCTION.md §5 (GAP-1 … GAP-7): unreleased brief and transcripts, Mythos 5

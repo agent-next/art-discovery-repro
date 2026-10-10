@@ -1,6 +1,6 @@
-# Real-data runs on agent-dev-01 (2026-09-29)
+# Real-data runs (2026-09-29)
 
-Host: `agent-dev-01` (16 vCPU, 62 GB, shared 309 GB disk, other lanes use 91-100% of it).
+Host: a 16-vCPU / 62 GB Linux machine whose data disk is shared with other users.
 Tools from micromamba env `art`: HMMER 3.4, MMseqs2, Bowtie2, SAMtools, subread
 (featureCounts), fastp 1.3.7, sra-tools 3.4.1. Repo at `main` after PRs #24-#27.
 
@@ -9,7 +9,7 @@ protein/GenBank flat files, FASTQ, BAMs) stay on the box and are re-downloadable
 
 | path | content |
 | --- | --- |
-| `commands/` | the exact wrapper scripts run on the box (`census.sh`, `rnaseq.sh`, `rnaseq326.sh`, `scan.sh`) |
+| `commands/` | the wrapper invocations used, with the box-local clone and data roots replaced by `$REPO` / `$DATA` (`census.sh`, `rnaseq.sh`, `rnaseq326.sh`, `scan.sh`) |
 | `census/` | `hmmsearch.domtblout`, `retained.ids` (271), `retained2.ids` (271, after the PR #24 fix), `filtered.faa`, `clu_rep_seq.fasta` (117), `clu_cluster.tsv` |
 | `controls/` | control sequences (UniProt) and their domtblout / retained lists |
 | `rnaseq/` | `features.gtf` (260 rows), `PRJNA836150.accessions`, `tpm_all.tsv` (fragments and TPM per feature for the 3 libraries run) |
@@ -78,12 +78,12 @@ records, not that new arrays exist.
 ## 4. Disk incident
 
 The shared disk reached 0 bytes free twice during the RNA-seq run (once from a 12.8 GB
-SAM, once from other lanes while `fasterq-dump` was writing). Mitigations merged: bowtie2
-streamed into samtools (no SAM, PR #25), `KEEP_INTERMEDIATES=0`, plain FASTQ deleted right
-after fastp (PR #26). SRR19152326 failed with "storage exhausted" and was abandoned; a
+SAM, once from another process on the same disk while `fasterq-dump` was writing).
+Mitigations merged: bowtie2 streamed into samtools (no SAM, PR #25), `KEEP_INTERMEDIATES=0`,
+plain FASTQ deleted right after fastp (PR #26). SRR19152326 failed with "storage exhausted" and was abandoned; a
 disk-safe run of the remaining libraries needs a dedicated volume.
 
 ## Cleanup
 
-Scratch removed from the box: FASTQ, trimmed reads, partial BAMs, tmux sessions. Kept for
-now: `~/runs/real/results/rnaseq/bam/*.sorted.bam` (3 libraries) and the census results.
+Scratch removed from the working machine: FASTQ, trimmed reads, partial BAMs, tmux
+sessions. Kept for now: the 3 sorted BAMs and the census results.

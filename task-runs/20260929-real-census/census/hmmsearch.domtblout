@@ -866,6 +866,5 @@ YP_009222671.1       -            205 RVT_N                PF13655.12    83    0
 # Query file:      data/hmm/rt_pfam6.hmm
 # Target file:     data/seq/seqdb.faa
 # Option settings: hmmsearch --domtblout results/census/hmmsearch.domtblout --noali -E 0.01 --domE 0.01 -Z 8 --domZ 8 data/hmm/rt_pfam6.hmm data/seq/seqdb.faa 
-# Current dir:     /home/robot/runs/real
 # Date:            Tue Sep 29 17:10:14 2026
 # [ok]
