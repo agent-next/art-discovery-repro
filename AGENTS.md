@@ -22,9 +22,8 @@ Parameter sources are cited as `paper p.NN` / `paper Methods §name` — every c
 ## Setup
 
 `make setup` creates `.venv` and installs the package with dev extras
-(`pip install -e '.[dev]'`) — the same install CI runs. Requires python3 >= 3.11
-(CI pins 3.12). `uv.lock` is committed; `uv sync --extra dev` gives the pinned
-equivalent.
+(`pip install -e '.[dev]'`). Requires python3 >= 3.11. For CI's locked install,
+run `uv sync --extra dev --locked --python 3.12`; `uv.lock` is committed.
 
 ## Check
 
@@ -33,6 +32,13 @@ pipeline benchmark` + `shellcheck -S warning pipeline/*/*.sh` + `python -m pytes
 with a coverage floor (offline; no network, GPU, or paid APIs). The Makefile uses
 `.venv/bin/` automatically when it exists, so no `source .venv/bin/activate` is needed.
 Single test file: `.venv/bin/python -m pytest tests/test_<name>.py`.
+
+Read the output as well as the exit code: the Makefile skips shellcheck when it is
+missing, and `tests/test_pipeline_live_tools.py` skips checks whose bioinformatics
+binaries are unavailable. Record those limits; use pytest `-rs` to list skip reasons.
+For shell-wrapper changes, install shellcheck in the test environment and verify it
+actually ran. Offline tests, wrapper fidelity, real-data results, paid-model
+benchmarks and scientific parity are separate levels in `REPRODUCTION.md` §2.
 
 ## Rules for agents working here
 
