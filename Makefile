@@ -27,6 +27,7 @@ shellcheck:
 # recipe, where the shell splits it into arguments without ever evaluating the
 # file names as Make or shell code. `make test` with no TESTS is ALL; a TESTS
 # that does not contain ALL is a subset (or none, when empty).
+TESTS ?= ALL
 TEST_MODE := $(if $(findstring ALL,$(TESTS)),$(if $(subst ALL,,$(TESTS)),subset,all),$(if $(TESTS),subset,none))
 
 test:
