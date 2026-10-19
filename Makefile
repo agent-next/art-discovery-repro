@@ -3,7 +3,10 @@
 # ALL (default), empty (no affected tests), or test files: CI passes the output of
 # scripts/ci/affected.py. ALL stays on the serial pytest run because the coverage
 # floor (a whole-suite property) is only meaningful there; subsets run in parallel.
+# TESTS is exported and read by scripts/ci/run_parallel.py from the environment:
+# expanding it on a recipe line would execute file names as shell source.
 TESTS ?= ALL
+export TESTS
 
 # Use the project venv when it exists (make setup / uv sync); fall back to PATH (CI).
 BIN := $(if $(wildcard .venv/bin/ruff),.venv/bin/,)
@@ -31,7 +34,7 @@ test:
 ifeq ($(strip $(TESTS)),ALL)
 	COVERAGE_CORE=$(COVERAGE_CORE) $(BIN)python -m pytest --cov=artharness --cov-fail-under=$(COV_FLOOR)
 else ifneq ($(strip $(TESTS)),)
-	$(BIN)python scripts/ci/run_parallel.py --runner pytest $(TESTS)
+	$(BIN)python scripts/ci/run_parallel.py --runner pytest
 else
 	@echo "tests: none affected"
 endif

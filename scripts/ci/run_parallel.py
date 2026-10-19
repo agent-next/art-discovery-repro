@@ -162,7 +162,14 @@ def main(argv=None):
     ap.add_argument("--start-dir", default="tests", help="unittest discovery root for ALL")
     ap.add_argument("tests", nargs="*")
     args = ap.parse_args(argv)
-    paths = [] if args.tests in ([], ["ALL"]) else args.tests
+    # TESTS reaches this script through the environment: a Makefile recipe cannot
+    # take a command-line argument without expanding it as shell source. An
+    # explicit positional argument still wins; "ALL" or unset/empty TESTS stays
+    # a full run (empty paths), as before.
+    tests = os.environ.get("TESTS")
+    paths = args.tests
+    if paths in ([], ["ALL"]) and tests not in (None, "", "ALL"):
+        paths = tests.split()
     env, skipped = None, []
     if args.runner == "pytest":
         files, alone, error = pytest_files(paths)

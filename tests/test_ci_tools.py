@@ -2,6 +2,7 @@
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -75,6 +76,10 @@ FILES = {
     "tests/test_lib_dyn.py": 'import importlib\nM = importlib.import_module(".core", "lib")\n',
     "README.md": "docs\n",
     "Makefile": "check:\n\ttrue\n",
+    # a partial-path literal ("census/01_hmmsearch.sh", no leading "pipeline/")
+    "pipeline/census/01_hmmsearch.sh": "#!/bin/bash\n",
+    "tests/test_partial_full.py": 'P = "pipeline/census/01_hmmsearch.sh"\n',
+    "tests/test_partial_sub.py": 'P = "census/01_hmmsearch.sh"\n',
 }
 
 
@@ -263,6 +268,12 @@ class AffectedTests(unittest.TestCase):
         self.assertEqual(r["mode"], "all")
         self.assertIn("no test reaches", r["reason"])
 
+    def test_partial_path_literal_selects_the_suffix_match(self):
+        # "census/01_hmmsearch.sh" in code cannot be resolved as a relative path:
+        # keep every tracked file whose path ends with those components
+        self.assertEqual(self.change("pipeline/census/01_hmmsearch.sh")["tests"],
+                         ["tests/test_partial_full.py", "tests/test_partial_sub.py"])
+
 
 class RecallProbeTests(unittest.TestCase):
     def test_failed_mutation_commit_never_resets(self):
@@ -382,6 +393,35 @@ class RecallInjectionTests(unittest.TestCase):
         self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
         self.assertFalse((root / "SENTINEL").exists())
         self.assertIn("a.py: selected=1 failing=1 missed=[]", out.stdout)
+
+
+class MakefileInjectionTests(unittest.TestCase):
+    """The `make test` recipe takes the selection through the TESTS environment
+    variable: file names must never be expanded as shell source on the line."""
+
+    def setUp(self):
+        td = tempfile.TemporaryDirectory()
+        self.addCleanup(td.cleanup)
+        self.root = Path(td.name)
+        (self.root / "tests").mkdir()
+        shutil.copytree(CI, self.root / "scripts" / "ci")
+        shutil.copy(Path(__file__).resolve().parents[1] / "Makefile", self.root / "Makefile")
+        (self.root / "tests" / "test_ok.py").write_text("def test_ok(): pass\n")
+        # so a full-collection fallback is impossible: the payload's fragments
+        # are not in the repo's collection and pytest must not fail the run
+        (self.root / "pytest.ini").write_text(
+            "[pytest]\naddopts = --ignore=tests/fixtures\n")
+        (self.root / "tests" / "fixtures").mkdir()
+        (self.root / "tests" / "fixtures" / "test_nocollect.py").write_text(
+            "import no_such_module_xyz\n")
+
+    def test_selected_filenames_are_never_shell_source(self):
+        payload = "tests/test_ok.py;touch SHELL_SENTINEL;#.py"
+        out = subprocess.run(["make", "test", f"TESTS={payload}"], cwd=self.root,
+                             capture_output=True, text=True)
+        self.assertFalse((self.root / "SHELL_SENTINEL").exists(), out.stdout + out.stderr)
+        self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+        self.assertIn("test_ok.py", out.stdout)
 
 
 class RunParallelTests(unittest.TestCase):

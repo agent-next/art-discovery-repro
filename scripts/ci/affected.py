@@ -149,6 +149,16 @@ def spelled(parts, words):
     return all(p in words for p in parts)
 
 
+def partial_matches(token, tracked):
+    """A path literal that is no tracked path itself may still be a suffix of one:
+    `REPO / "census" / "01_hmmsearch.sh"` reads as the file under pipeline/ too.
+    Every tracked path ending in /<token> (or equal to a deeper path's suffix)
+    is a match: recall over precision, like the mirrored-tree rule."""
+    if "/" not in token:
+        return set()
+    return {c for c in tracked if "/" + token in c}
+
+
 def build_graph(files, root):
     tracked = set(files)
     by_module = defaultdict(set)
@@ -214,6 +224,8 @@ def build_graph(files, root):
             else:
                 deps |= {c for c in by_name.get(token.rsplit("/", 1)[-1], ())
                          if related(f, c) or spelled(c.split("/")[:-1], words)}
+                if "/" in token:  # a partial path can't be resolved: keep every suffix match
+                    deps |= partial_matches(token, tracked)
         if "make" in words:  # `make -C sub` can reach any Makefile
             deps |= by_name.get("Makefile", set())
         for word in words:
