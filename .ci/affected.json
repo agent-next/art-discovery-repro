@@ -1,0 +1,7 @@
+{
+  "full": [
+    ".github/**", "Makefile", "*.mk", "pyproject.toml", "setup.py", "setup.cfg",
+    "requirements*.txt", "uv.lock", "pytest.ini", "conftest.py", ".ci/**",
+    "scripts/ci/**"
+  ]
+}
