@@ -322,8 +322,10 @@ class RecallDefaultGlobTests(unittest.TestCase):
         git(root, "init", "-q", "-b", "work")
         git(root, "add", "-A")
         git(root, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "base")
+        # the default glob is under test: a caller's TEST_GLOB (recall's documented override) must not leak in
+        env = {k: v for k, v in os.environ.items() if k != "TEST_GLOB"}
         out = subprocess.run(["bash", str(CI / "recall.sh"), "a.py"], cwd=root, capture_output=True,
-                             text=True, env={**os.environ, "AFFECTED": str(CI / "affected.py")})
+                             text=True, env={**env, "AFFECTED": str(CI / "affected.py")})
         self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
         self.assertIn("a.py: selected=1 failing=1 missed=[]", out.stdout)
 
