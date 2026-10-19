@@ -5,6 +5,7 @@
     "scripts/ci/**",
     "benchmark/task_statement.md",
     "src/artharness/demo/__main__.py",
-    "src/artharness/arrays.py"
+    "src/artharness/arrays.py",
+    "pipeline/**"
   ]
 }
