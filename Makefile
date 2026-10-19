@@ -22,22 +22,22 @@ shellcheck:
 		echo "shellcheck not installed: skipping (CI runs it)"; \
 	fi
 
-# ALL (default), empty (no affected tests), or test files. CI passes the
-# selection through the TESTS environment variable: "$$TESTS" reads it in the
-# recipe, where the shell splits it into arguments without ever evaluating the
-# file names as Make or shell code. `make test` with no TESTS is ALL; a TESTS
-# that does not contain ALL is a subset (or none, when empty).
+# ALL (default), empty (no affected tests), or test files: CI passes its
+# selection through the TESTS environment variable. The recipe reads it
+# quoted only ("$$TESTS"); tr + xargs split the selector's space-joined
+# args format into runner arguments, so a file name is never evaluated as
+# Make or shell code.
 TESTS ?= ALL
-TEST_MODE := $(if $(findstring ALL,$(TESTS)),$(if $(subst ALL,,$(TESTS)),subset,all),$(if $(TESTS),subset,none))
+export TESTS
 
 test:
-ifeq ($(TEST_MODE),all)
-	COVERAGE_CORE=$(COVERAGE_CORE) $(BIN)python -m pytest --cov=artharness --cov-fail-under=$(COV_FLOOR)
-else ifeq ($(TEST_MODE),none)
-	@echo "tests: none affected"
-else
-	$(BIN)python scripts/ci/run_parallel.py --runner pytest $$TESTS
-endif
+	@if [ "$$TESTS" = ALL ]; then \
+		COVERAGE_CORE=$(COVERAGE_CORE) $(BIN)python -m pytest --cov=artharness --cov-fail-under=$(COV_FLOOR); \
+	elif [ -z "$$TESTS" ]; then \
+		echo "tests: none affected"; \
+	else \
+		printf '%s\n' "$$TESTS" | tr ' ' '\n' | xargs -d '\n' -r $(BIN)python scripts/ci/run_parallel.py --runner pytest; \
+	fi
 
 fmt:
 	$(BIN)ruff check --fix src tests pipeline benchmark

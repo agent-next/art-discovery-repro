@@ -27,6 +27,6 @@ jobs:
           else
             echo "tests=ALL" >> "$GITHUB_OUTPUT"
           fi
-      - run: make check TESTS="$TESTS"
+      - run: make check
         env:
           TESTS: ${{ steps.affected.outputs.tests }}
