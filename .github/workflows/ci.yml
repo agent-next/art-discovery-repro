@@ -3,12 +3,30 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: "37 7 * * *"  # nightly full suite: the safety net under PR test selection (UTC)
 
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
+      # PR head is a merge commit: depth 2 holds it and its base parent, all the diff needs.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
       - uses: astral-sh/setup-uv@v7
       - run: uv sync --extra dev --locked --python 3.12
-      - run: make check
+      # PRs run only the tests their change can reach, in parallel; pushes to
+      # main and the nightly schedule run everything. A selector failure prints
+      # ALL itself, so it never turns into "no tests"; make check receives the
+      # selection through the quoted TESTS environment variable.
+      - id: affected
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = pull_request ] && T=$(python3 scripts/ci/affected.py --base HEAD^1 --format args); then
+            echo "tests=$T" >> "$GITHUB_OUTPUT"
+          else
+            echo "tests=ALL" >> "$GITHUB_OUTPUT"
+          fi
+      - run: make check TESTS="$TESTS"
+        env:
+          TESTS: ${{ steps.affected.outputs.tests }}
