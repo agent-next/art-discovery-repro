@@ -1,0 +1,11 @@
+{
+  "full": [
+    ".github/**", "Makefile", "*.mk", "pyproject.toml", "setup.py", "setup.cfg",
+    "requirements*.txt", "uv.lock", "pytest.ini", "conftest.py", ".ci/**",
+    "scripts/ci/**",
+    "benchmark/task_statement.md",
+    "src/artharness/demo/__main__.py",
+    "src/artharness/arrays.py",
+    "pipeline/**"
+  ]
+}
